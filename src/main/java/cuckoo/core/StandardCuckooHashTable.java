@@ -27,6 +27,7 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     private int seed2;
     private final Random random;
     private final BenchmarkStats stats = new BenchmarkStats();
+    private static final int MAX_GROWTHS = 10;
 
     @SuppressWarnings("unchecked")
     public StandardCuckooHashTable(int expectedSize) {
@@ -138,43 +139,43 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     @SuppressWarnings("unchecked")
     private void rehash() {
         stats.recordRehash();
-        // Collect all existing entries
         Entry<K, V>[] oldTable1 = table1;
         Entry<K, V>[] oldTable2 = table2;
         int oldSize = size;
 
-        for (int attempt = 0; attempt < 10; attempt++) {
-            seed1 = random.nextInt();
-            seed2 = random.nextInt();
-            table1 = new Entry[capacity];
-            table2 = new Entry[capacity];
-            maxLoop = (int) (6 * Math.log(capacity) / Math.log(2));
-            size = 0;
+        for (int growth = 0; growth <= MAX_GROWTHS; growth++) {
+            for (int attempt = 0; attempt < 10; attempt++) {
+                seed1 = random.nextInt();
+                seed2 = random.nextInt();
+                table1 = new Entry[capacity];
+                table2 = new Entry[capacity];
+                maxLoop = (int) (6 * Math.log(capacity) / Math.log(2));
+                size = 0;
 
-            boolean success = true;
-            try {
-                for (Entry<K, V> e : oldTable1) {
-                    if (e != null) {
-                        insertEntryNoRehash(e);
+                boolean success = true;
+                try {
+                    for (Entry<K, V> e : oldTable1) {
+                        if (e != null) {
+                            insertEntryNoRehash(e);
+                        }
                     }
-                }
-                for (Entry<K, V> e : oldTable2) {
-                    if (e != null) {
-                        insertEntryNoRehash(e);
+                    for (Entry<K, V> e : oldTable2) {
+                        if (e != null) {
+                            insertEntryNoRehash(e);
+                        }
                     }
+                } catch (IllegalStateException ex) {
+                    success = false;
                 }
-            } catch (IllegalStateException ex) {
-                success = false;
+
+                if (success && size == oldSize) {
+                    return;
+                }
             }
 
-            if (success && size == oldSize) {
-                return;
-            }
+            capacity *= 2;
         }
-
-        // All 10 attempts failed: double capacity and retry
-        capacity *= 2;
-        rehash();
+        throw new IllegalStateException("Rehash failed after " + MAX_GROWTHS + " capacity doublings");
     }
 
     private void insertEntryNoRehash(Entry<K, V> entry) {

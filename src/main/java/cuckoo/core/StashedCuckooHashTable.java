@@ -107,6 +107,7 @@ public class StashedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     private final Random random;
     private final BenchmarkStats stats = new BenchmarkStats();
     private static final int MAX_LOOP = 500;
+    private static final int MAX_GROWTHS = 10;
 
     public StashedCuckooHashTable(int expectedSize, int bucketSize, int stashSize) {
         this.bucketSize = bucketSize;
@@ -311,31 +312,32 @@ public class StashedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
 
     private void rehashFromOld(List<Bucket<K, V>> oldB1, List<Bucket<K, V>> oldB2,
                                ArrayList<Entry<K, V>> oldStash, int oldSize) {
-        for (int attempt = 0; attempt < 10; attempt++) {
-            seed1 = random.nextInt();
-            seed2 = random.nextInt();
-            buckets1 = createBucketList(numBuckets);
-            buckets2 = createBucketList(numBuckets);
-            stash = new ArrayList<>();
-            size = 0;
+        for (int growth = 0; growth < MAX_GROWTHS; growth++) {
+            for (int attempt = 0; attempt < 10; attempt++) {
+                seed1 = random.nextInt();
+                seed2 = random.nextInt();
+                buckets1 = createBucketList(numBuckets);
+                buckets2 = createBucketList(numBuckets);
+                stash = new ArrayList<>();
+                size = 0;
 
-            boolean success = true;
-            try {
-                reinsertAllFromBuckets(oldB1);
-                reinsertAllFromBuckets(oldB2);
-                reinsertAllFromStash(oldStash);
-            } catch (IllegalStateException ex) {
-                success = false;
+                boolean success = true;
+                try {
+                    reinsertAllFromBuckets(oldB1);
+                    reinsertAllFromBuckets(oldB2);
+                    reinsertAllFromStash(oldStash);
+                } catch (IllegalStateException ex) {
+                    success = false;
+                }
+
+                if (success && size == oldSize) {
+                    return;
+                }
             }
 
-            if (success && size == oldSize) {
-                return;
-            }
+            numBuckets *= 2;
         }
-
-        // Still failing: double again
-        numBuckets *= 2;
-        rehashFromOld(oldB1, oldB2, oldStash, oldSize);
+        throw new IllegalStateException("Rehash failed after " + MAX_GROWTHS + " capacity doublings");
     }
 
     private void reinsertAllFromBuckets(List<Bucket<K, V>> buckets) {
