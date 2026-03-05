@@ -7,7 +7,7 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 ```
 .
 ├── pom.xml
-├── research.md
+├── .gitignore
 ├── scripts/
 │   ├── run_benchmarks.sh
 │   ├── generate_charts.py
@@ -29,6 +29,8 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 │   │   │   └── BenchmarkStats.java
 │   │   ├── util/
 │   │   │   └── WorkloadGenerator.java
+│   │   ├── analysis/
+│   │   │   └── DirectAnalysis.java        (stress tests, no JMH overhead)
 │   │   └── benchmarks/
 │   │       ├── InsertBenchmark.java
 │   │       ├── LookupBenchmark.java
@@ -43,10 +45,12 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 │       ├── StatsAndWorkloadTest.java
 │       └── CorrectnessTest.java
 ├── docs/
+│   ├── GETTING_STARTED.md
+│   ├── RESEARCH.md
 │   └── report/
 │       └── final-report.md
 ├── results/
-│   ├── csv/           (JMH output)
+│   ├── csv/           (DirectAnalysis / JMH output)
 │   └── charts/        (generated PNGs)
 └── README.md
 ```
@@ -57,23 +61,34 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 - **Maven 3.6+**
 - **Python 3.8+** (only needed for chart generation)
 
+> For a full walkthrough including setup, testing, and result analysis, see [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).
+
 ## Build Instructions
 
 ```bash
 # Compile
 mvn clean compile
 
-# Run tests
+# Run tests (61 tests across all 5 implementations)
 mvn test
 
 # Build benchmarks jar
 mvn package -DskipTests
 ```
 
-## Running Benchmarks
+## Quick Analysis (Recommended First Step)
+
+Run `DirectAnalysis` to stress-test all implementations and generate CSV data in seconds, without JMH overhead:
 
 ```bash
-# Run all benchmarks (takes ~2 hours)
+mvn compile -q
+java -cp target/classes cuckoo.analysis.DirectAnalysis
+```
+
+## Running Full JMH Benchmarks
+
+```bash
+# Run all benchmarks (takes ~30 minutes)
 bash scripts/run_benchmarks.sh
 
 # Or run a specific benchmark
