@@ -86,7 +86,7 @@ procedure insert(x):
     insert(entry)
 ```
 
-The MaxLoop parameter is set to 6 * log2(capacity) following the theoretical recommendation. When exceeded, a rehash operation selects new hash function seeds and reinserts all existing entries. If rehashing fails after 10 attempts with different seeds, the table capacity is doubled.
+The MaxLoop parameter is set to 6 * log2(capacity) following the theoretical recommendation. When exceeded, a rehash operation selects new hash function seeds and reinserts all existing entries. If rehashing fails after 10 attempts with different seeds, the table capacity is doubled. This growth is capped at MAX_GROWTHS=10 doublings to guarantee termination; beyond that, an exception is thrown.
 
 **Deletion** is trivial: check both locations, remove if found. No tombstones are needed, unlike linear probing.
 
@@ -167,11 +167,11 @@ A critical implementation detail: all index computations use `Math.floorMod(hash
 
 All hash table implementations share a common interface (`CuckooHashTable<K, V>`) defining `get`, `put`, `remove`, `size`, `loadFactor`, and `getStats` methods. This enables uniform benchmarking across all variants.
 
-**StandardCuckooHashTable** uses two arrays of `Entry<K, V>` objects (inner class with key and value fields). The capacity is set to 2.2 times the expected size, and MaxLoop is computed as `6 * log2(capacity)`.
+**StandardCuckooHashTable** uses two arrays of `Entry<K, V>` objects (inner class with key and value fields). The capacity is set to 2.2 times the expected size, and MaxLoop is computed as `6 * log2(capacity)`. Rehashing attempts up to 10 different seed pairs, and if all fail, doubles capacity up to MAX_GROWTHS=10 times before throwing an exception, ensuring bounded growth.
 
-**BucketizedCuckooHashTable** introduces a `Bucket<K, V>` inner class containing an array of B `Entry<K, V>` slots. The table maintains two lists of buckets. The number of buckets is calculated to achieve approximately 90% target load factor, with MAX_LOOP set to 500 for the displacement chain.
+**BucketizedCuckooHashTable** introduces a `Bucket<K, V>` inner class containing an array of B `Entry<K, V>` slots. The table maintains two lists of buckets. The number of buckets is calculated to achieve approximately 90% target load factor, with MAX_LOOP set to 500 for the displacement chain. The insertion path is bounded: up to 20 rehash-and-retry cycles in the outer loop, and rehash itself allows up to 10 seed attempts per capacity level with at most MAX_GROWTHS=10 capacity doublings.
 
-**StashedCuckooHashTable** extends the bucketized design with an `ArrayList<Entry<K, V>>` stash of configurable capacity. When displacement chains fail, entries go to the stash before triggering a rehash.
+**StashedCuckooHashTable** extends the bucketized design with an `ArrayList<Entry<K, V>>` stash of configurable capacity. When displacement chains fail, entries go to the stash before triggering a rehash. Like the bucketized variant, all rehash growth is bounded by MAX_GROWTHS=10.
 
 ### 5.4 Baseline Implementations
 

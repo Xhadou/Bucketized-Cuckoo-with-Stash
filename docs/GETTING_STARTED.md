@@ -181,6 +181,7 @@ These are enforced throughout the codebase — important if you are extending th
 - **Always use** `Math.floorMod(MurmurHash3.hash32(key, seed), capacity)` — never `%` (breaks on negative hashes)
 - **Never derive h2 from h1** — use completely independent seeds for the two hash functions
 - **Always check for an existing key** before starting a displacement chain (prevents size inflation on updates)
+- **All rehash paths are bounded** — insertion retries up to 20 rehash cycles, and each rehash tries 10 seed pairs per capacity level with at most `MAX_GROWTHS=10` capacity doublings before failing with an exception. There is no unbounded recursion.
 
 ## 10. Further Reading
 
