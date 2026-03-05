@@ -84,6 +84,15 @@ public class StashedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
             }
             return null;
         }
+
+        boolean containsKey(K key) {
+            for (int i = 0; i < bucketSize; i++) {
+                if (slots[i] != null && slots[i].key.equals(key)) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     private List<Bucket<K, V>> buckets1;
@@ -132,15 +141,15 @@ public class StashedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     public V get(K key) {
         // Check buckets1
         int h1 = hash1(key);
-        V val = buckets1.get(h1).find(key);
-        if (val != null) {
-            return val;
+        Bucket<K, V> b1 = buckets1.get(h1);
+        if (b1.containsKey(key)) {
+            return b1.find(key);
         }
         // Check buckets2
         int h2 = hash2(key);
-        val = buckets2.get(h2).find(key);
-        if (val != null) {
-            return val;
+        Bucket<K, V> b2 = buckets2.get(h2);
+        if (b2.containsKey(key)) {
+            return b2.find(key);
         }
         // Linear scan through stash
         for (int i = 0; i < stash.size(); i++) {
@@ -171,82 +180,88 @@ public class StashedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
             }
         }
 
-        // Step 2: Try insert into buckets1[h1]
+        // Step 2: Insert new entry with bounded rehash attempts
         Entry<K, V> entry = new Entry<>(key, value);
-        if (buckets1.get(h1).tryInsert(entry)) {
-            size++;
-            stats.recordDisplacementChain(0);
-            return;
-        }
+        insertEntry(entry);
+    }
 
-        // Step 3: Try insert into buckets2[h2]
-        if (buckets2.get(h2).tryInsert(entry)) {
-            size++;
-            stats.recordDisplacementChain(0);
-            return;
-        }
-
-        // Step 4: Both full - displacement chain
-        for (int i = 0; i < MAX_LOOP; i++) {
-            // Evict a random entry from buckets1[h1]
-            int evictIndex = random.nextInt(bucketSize);
-            Entry<K, V> evicted = buckets1.get(h1).evict(evictIndex);
-            buckets1.get(h1).tryInsert(entry);
-            entry = evicted;
-
-            // Try to place evicted entry in its alternate bucket (table 2)
-            int altH2 = hash2(entry.key);
-            if (buckets2.get(altH2).tryInsert(entry)) {
-                size++;
-                stats.recordDisplacementChain(i + 1);
-                return;
-            }
-
-            // Evict from buckets2[altH2]
-            evictIndex = random.nextInt(bucketSize);
-            evicted = buckets2.get(altH2).evict(evictIndex);
-            buckets2.get(altH2).tryInsert(entry);
-            entry = evicted;
-
-            // Try to place in table 1
-            h1 = hash1(entry.key);
+    private void insertEntry(Entry<K, V> entry) {
+        for (int rehashAttempt = 0; rehashAttempt < 20; rehashAttempt++) {
+            int h1 = hash1(entry.key);
             if (buckets1.get(h1).tryInsert(entry)) {
                 size++;
-                stats.recordDisplacementChain(i + 1);
+                stats.recordDisplacementChain(0);
                 return;
             }
-        }
+            int h2 = hash2(entry.key);
+            if (buckets2.get(h2).tryInsert(entry)) {
+                size++;
+                stats.recordDisplacementChain(0);
+                return;
+            }
 
-        // Step 5: Displacement chain failed - try stash
-        if (stash.size() < stashCapacity) {
-            stash.add(entry);
-            size++;
+            // Both full - displacement chain
+            for (int i = 0; i < MAX_LOOP; i++) {
+                // Evict a random entry from buckets1[h1]
+                int evictIndex = random.nextInt(bucketSize);
+                Entry<K, V> evicted = buckets1.get(h1).evict(evictIndex);
+                buckets1.get(h1).tryInsert(entry);
+                entry = evicted;
+
+                // Try to place evicted entry in its alternate bucket (table 2)
+                int altH2 = hash2(entry.key);
+                if (buckets2.get(altH2).tryInsert(entry)) {
+                    size++;
+                    stats.recordDisplacementChain(i + 1);
+                    return;
+                }
+
+                // Evict from buckets2[altH2]
+                evictIndex = random.nextInt(bucketSize);
+                evicted = buckets2.get(altH2).evict(evictIndex);
+                buckets2.get(altH2).tryInsert(entry);
+                entry = evicted;
+
+                // Try to place in table 1
+                h1 = hash1(entry.key);
+                if (buckets1.get(h1).tryInsert(entry)) {
+                    size++;
+                    stats.recordDisplacementChain(i + 1);
+                    return;
+                }
+            }
+
+            // Displacement chain failed - try stash
+            if (stash.size() < stashCapacity) {
+                stash.add(entry);
+                size++;
+                stats.recordDisplacementChain(MAX_LOOP);
+                stats.recordStashInsertion();
+                return;
+            }
+
+            // Stash is also full - rehash and retry
             stats.recordDisplacementChain(MAX_LOOP);
-            stats.recordStashInsertion();
-            return;
+            rehash();
         }
-
-        // Step 6: Stash is also full - rehash and retry
-        stats.recordDisplacementChain(MAX_LOOP);
-        rehash();
-        put(entry.key, entry.value);
+        throw new IllegalStateException("Insertion failed after 20 rehash attempts");
     }
 
     @Override
     public V remove(K key) {
         // Check buckets1
         int h1 = hash1(key);
-        V val = buckets1.get(h1).removeKeyAndReturn(key);
-        if (val != null) {
+        Bucket<K, V> b1 = buckets1.get(h1);
+        if (b1.containsKey(key)) {
             size--;
-            return val;
+            return b1.removeKeyAndReturn(key);
         }
         // Check buckets2
         int h2 = hash2(key);
-        val = buckets2.get(h2).removeKeyAndReturn(key);
-        if (val != null) {
+        Bucket<K, V> b2 = buckets2.get(h2);
+        if (b2.containsKey(key)) {
             size--;
-            return val;
+            return b2.removeKeyAndReturn(key);
         }
         // Check stash
         for (int i = 0; i < stash.size(); i++) {

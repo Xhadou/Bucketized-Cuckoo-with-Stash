@@ -45,7 +45,7 @@ public class MixedWorkloadBenchmark {
 
         // Generate mixed operations: 80% reads, 20% writes
         operations = new int[OPS];
-        int nextInsert = preload;
+        int nextInsert = 0;
         for (int i = 0; i < OPS; i++) {
             if (rng.nextDouble() < 0.8) {
                 // Read: 50% hit, 50% miss
@@ -55,8 +55,8 @@ public class MixedWorkloadBenchmark {
                     operations[i] = -(TABLE_SIZE + rng.nextInt(TABLE_SIZE)); // missing key (negative)
                 }
             } else {
-                // Write: insert new key
-                operations[i] = nextInsert++;
+                // Write: insert new key (offset by TABLE_SIZE to distinguish from reads)
+                operations[i] = TABLE_SIZE + nextInsert++;
             }
         }
     }
@@ -65,14 +65,17 @@ public class MixedWorkloadBenchmark {
     public int mixedWorkload() {
         int sum = 0;
         for (int op : operations) {
-            if (op >= 0 && op < TABLE_SIZE) {
-                Integer val = table.get(op);
-                if (val != null) sum += val;
+            if (op >= TABLE_SIZE) {
+                // Write operation
+                table.put(op, op);
             } else if (op < 0) {
+                // Negative lookup (miss)
                 Integer val = table.get(-op);
                 if (val != null) sum += val;
             } else {
-                table.put(op, op);
+                // Positive lookup (hit)
+                Integer val = table.get(op);
+                if (val != null) sum += val;
             }
         }
         return sum;

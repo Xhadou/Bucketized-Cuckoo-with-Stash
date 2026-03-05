@@ -40,7 +40,7 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
     public V get(K key) {
         int idx = hash(key);
         for (int i = 0; i < capacity; i++) {
-            int pos = (idx + i) % capacity;
+            int pos = Math.floorMod(idx + i, capacity);
             Entry<K, V> e = table[pos];
             if (e == null) {
                 return null;
@@ -60,7 +60,7 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
         }
         int idx = hash(key);
         for (int i = 0; i < capacity; i++) {
-            int pos = (idx + i) % capacity;
+            int pos = Math.floorMod(idx + i, capacity);
             Entry<K, V> e = table[pos];
             if (e == null) {
                 table[pos] = new Entry<>(key, value);
@@ -81,7 +81,7 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
     public V remove(K key) {
         int idx = hash(key);
         for (int i = 0; i < capacity; i++) {
-            int pos = (idx + i) % capacity;
+            int pos = Math.floorMod(idx + i, capacity);
             Entry<K, V> e = table[pos];
             if (e == null) {
                 return null;

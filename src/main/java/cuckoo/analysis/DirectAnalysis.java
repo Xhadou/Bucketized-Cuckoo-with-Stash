@@ -286,7 +286,7 @@ public class DirectAnalysis {
                             Integer v = mixTable.get(mixRng.nextInt(preload));
                             if (v != null) sum += v;
                         } else {
-                            mixTable.put(nextKey++, nextKey);
+                            mixTable.put(nextKey, nextKey); nextKey++;
                         }
                     }
                     long elapsed = System.nanoTime() - start;

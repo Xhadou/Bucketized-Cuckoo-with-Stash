@@ -82,36 +82,38 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     }
 
     private void insertEntry(Entry<K, V> entry) {
-        for (int i = 0; i < maxLoop; i++) {
-            int h1 = hash1(entry.key);
-            if (table1[h1] == null) {
+        for (int rehashAttempt = 0; rehashAttempt < 20; rehashAttempt++) {
+            for (int i = 0; i < maxLoop; i++) {
+                int h1 = hash1(entry.key);
+                if (table1[h1] == null) {
+                    table1[h1] = entry;
+                    size++;
+                    stats.recordDisplacementChain(i);
+                    return;
+                }
+                // Swap with existing entry in table1
+                Entry<K, V> displaced = table1[h1];
                 table1[h1] = entry;
-                size++;
-                stats.recordDisplacementChain(i);
-                return;
-            }
-            // Swap with existing entry in table1
-            Entry<K, V> displaced = table1[h1];
-            table1[h1] = entry;
-            entry = displaced;
+                entry = displaced;
 
-            int h2 = hash2(entry.key);
-            if (table2[h2] == null) {
+                int h2 = hash2(entry.key);
+                if (table2[h2] == null) {
+                    table2[h2] = entry;
+                    size++;
+                    stats.recordDisplacementChain(i);
+                    return;
+                }
+                // Swap with existing entry in table2
+                displaced = table2[h2];
                 table2[h2] = entry;
-                size++;
-                stats.recordDisplacementChain(i);
-                return;
+                entry = displaced;
             }
-            // Swap with existing entry in table2
-            displaced = table2[h2];
-            table2[h2] = entry;
-            entry = displaced;
-        }
 
-        // maxLoop exceeded: rehash and try again
-        stats.recordDisplacementChain(maxLoop);
-        rehash();
-        insertEntry(entry);
+            // maxLoop exceeded: rehash and retry
+            stats.recordDisplacementChain(maxLoop);
+            rehash();
+        }
+        throw new IllegalStateException("Insertion failed after 20 rehash attempts");
     }
 
     @Override
