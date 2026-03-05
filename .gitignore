@@ -1,1 +1,4 @@
 .claude/
+target/
+*.class
+firebase-debug.log
