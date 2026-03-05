@@ -23,6 +23,7 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
     private Entry<K, V>[] table;
     private int capacity;
     private int size;
+    private final BenchmarkStats stats = new BenchmarkStats();
 
     @SuppressWarnings("unchecked")
     public LinearProbingHashTable(int initialCapacity) {
@@ -151,7 +152,7 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
 
     @Override
     public BenchmarkStats getStats() {
-        return new BenchmarkStats();
+        return stats;
     }
 
     @SuppressWarnings("unchecked")

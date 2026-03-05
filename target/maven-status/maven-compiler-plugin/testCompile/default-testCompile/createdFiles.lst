@@ -1,0 +1,7 @@
+cuckoo\StashedCuckooTest.class
+cuckoo\BaselinesTest.class
+cuckoo\BucketizedCuckooTest.class
+cuckoo\CorrectnessTest.class
+cuckoo\StandardCuckooTest.class
+cuckoo\MurmurHash3Test.class
+cuckoo\StatsAndWorkloadTest.class

@@ -1,0 +1,13 @@
+dontinline,*.*_all_jmhStub
+dontinline,*.*_avgt_jmhStub
+dontinline,*.*_sample_jmhStub
+dontinline,*.*_ss_jmhStub
+dontinline,*.*_thrpt_jmhStub
+inline,cuckoo/benchmarks/InsertBenchmark.generateKeys
+inline,cuckoo/benchmarks/InsertBenchmark.insertAll
+inline,cuckoo/benchmarks/LoadFactorBenchmark.measureMaxLoadFactor
+inline,cuckoo/benchmarks/LookupBenchmark.negativeLookup
+inline,cuckoo/benchmarks/LookupBenchmark.positiveLookup
+inline,cuckoo/benchmarks/LookupBenchmark.setup
+inline,cuckoo/benchmarks/MixedWorkloadBenchmark.mixedWorkload
+inline,cuckoo/benchmarks/MixedWorkloadBenchmark.setup

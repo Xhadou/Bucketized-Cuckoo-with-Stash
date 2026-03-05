@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="cuckoo.BucketizedCuckooTest" time="0.021" tests="5" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="java.specification.version" value="21"/>
+    <property name="sun.cpu.isalist" value="amd64"/>
+    <property name="sun.jnu.encoding" value="Cp1252"/>
+    <property name="java.class.path" value="D:\Bucketized-Cuckoo-with-Stash\target\test-classes;D:\Bucketized-Cuckoo-with-Stash\target\classes;C:\Users\praty\.m2\repository\org\openjdk\jmh\jmh-core\1.37\jmh-core-1.37.jar;C:\Users\praty\.m2\repository\net\sf\jopt-simple\jopt-simple\5.0.4\jopt-simple-5.0.4.jar;C:\Users\praty\.m2\repository\org\apache\commons\commons-math3\3.6.1\commons-math3-3.6.1.jar;C:\Users\praty\.m2\repository\org\openjdk\jmh\jmh-generator-annprocess\1.37\jmh-generator-annprocess-1.37.jar;C:\Users\praty\.m2\repository\junit\junit\4.13.2\junit-4.13.2.jar;C:\Users\praty\.m2\repository\org\hamcrest\hamcrest-core\1.3\hamcrest-core-1.3.jar;"/>
+    <property name="java.vm.vendor" value="Oracle Corporation"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="user.variant" value=""/>
+    <property name="java.vendor.url" value="https://java.oracle.com/"/>
+    <property name="user.timezone" value="Asia/Calcutta"/>
+    <property name="os.name" value="Windows 11"/>
+    <property name="java.vm.specification.version" value="21"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="US"/>
+    <property name="sun.boot.library.path" value="C:\Program Files\Java\jdk-21\bin"/>
+    <property name="sun.java.command" value="C:\Users\praty\AppData\Local\Temp\surefire7121477106020197775\surefirebooter-20260305145109093_3.jar C:\Users\praty\AppData\Local\Temp\surefire7121477106020197775 2026-03-05T14-51-08_647-jvmRun1 surefire-20260305145109093_1tmp surefire_0-20260305145109093_2tmp"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="surefire.test.class.path" value="D:\Bucketized-Cuckoo-with-Stash\target\test-classes;D:\Bucketized-Cuckoo-with-Stash\target\classes;C:\Users\praty\.m2\repository\org\openjdk\jmh\jmh-core\1.37\jmh-core-1.37.jar;C:\Users\praty\.m2\repository\net\sf\jopt-simple\jopt-simple\5.0.4\jopt-simple-5.0.4.jar;C:\Users\praty\.m2\repository\org\apache\commons\commons-math3\3.6.1\commons-math3-3.6.1.jar;C:\Users\praty\.m2\repository\org\openjdk\jmh\jmh-generator-annprocess\1.37\jmh-generator-annprocess-1.37.jar;C:\Users\praty\.m2\repository\junit\junit\4.13.2\junit-4.13.2.jar;C:\Users\praty\.m2\repository\org\hamcrest\hamcrest-core\1.3\hamcrest-core-1.3.jar;"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="C:\Users\praty"/>
+    <property name="user.language" value="en"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.version.date" value="2024-01-16"/>
+    <property name="java.home" value="C:\Program Files\Java\jdk-21"/>
+    <property name="file.separator" value="\"/>
+    <property name="basedir" value="D:\Bucketized-Cuckoo-with-Stash"/>
+    <property name="java.vm.compressedOopsMode" value="32-bit"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="surefire.real.class.path" value="C:\Users\praty\AppData\Local\Temp\surefire7121477106020197775\surefirebooter-20260305145109093_3.jar"/>
+    <property name="user.script" value=""/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="21.0.2+13-LTS-58"/>
+    <property name="user.name" value="praty"/>
+    <property name="stdout.encoding" value="Cp1252"/>
+    <property name="path.separator" value=";"/>
+    <property name="os.version" value="10.0"/>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
+    <property name="localRepository" value="C:\Users\praty\.m2\repository"/>
+    <property name="java.vendor.url.bug" value="https://bugreport.java.com/bugreport/"/>
+    <property name="java.io.tmpdir" value="C:\Users\praty\AppData\Local\Temp\"/>
+    <property name="java.version" value="21.0.2"/>
+    <property name="user.dir" value="D:\Bucketized-Cuckoo-with-Stash"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="sun.os.patch.level" value=""/>
+    <property name="native.encoding" value="Cp1252"/>
+    <property name="java.library.path" value="C:\Program Files\Java\jdk-21\bin;C:\WINDOWS\Sun\Java\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\praty\bin;D:\anaconda3\condabin;C:\Users\praty\AppData\Local\Programs\Microsoft VS Code;D:\23ai\dbhomeFree\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0;C:\WINDOWS\System32\OpenSSH;C:\MinGW\bin;C:\Program Files\lua;C:\Program Files\dotnet;C:\Users\praty\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\Scripts;C:\Program Files\Git\cmd;C:\Program Files\Graphviz\bin;C:\Program Files\Git LFS;C:\ProgramData\chocolatey\bin;D:\Applications\cursor\resources\app\bin;C:\Program Files\nodejs;C:\Program Files\GitHub CLI;C:\Program Files\PowerShell\7;C:\ProgramData\chocolatey\lib\maven\apache-maven-3.9.12\bin;C:\Users\praty\.local\bin;C:\Users\praty\AppData\Local\Programs\Python\Python310\Scripts;C:\Users\praty\AppData\Local\Programs\Python\Python310;C:\Program Files\PowerShell\7;C:\Users\praty\Downloads\winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64msvcrt-13.0.0-r1\mingw64\bin;D:\23ai\dbhomeFree\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Users\praty\AppData\Local\Microsoft\WindowsApps;C:\Windows\System32\OpenSSH;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\lua;C:\Program Files\dotnet;C:\Users\praty\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\Scripts;C:\Users\praty\AppData\Roaming\npm;C:\Program Files\Git\cmd;C:\Program Files\Graphviz\bin;C:\Program Files\Git LFS;C:\ProgramData\chocolatey\bin;C:\Program Files\nodejs;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\System32\Wb;C:\Users\praty\AppData\Local\Programs\Microsoft VS Code\bin;D:\anaconda3;D:\anaconda3\Scripts;D:\anaconda3\condabin;D:\Antigravity\bin;."/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="stderr.encoding" value="Cp1252"/>
+    <property name="java.vendor" value="Oracle Corporation"/>
+    <property name="java.vm.version" value="21.0.2+13-LTS-58"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="65.0"/>
+  </properties>
+  <testcase name="testUpdateExistingKey" classname="cuckoo.BucketizedCuckooTest" time="0.0"/>
+  <testcase name="testBasicPutGet" classname="cuckoo.BucketizedCuckooTest" time="0.0"/>
+  <testcase name="testHighLoadFactor" classname="cuckoo.BucketizedCuckooTest" time="0.007"/>
+  <testcase name="testRemove" classname="cuckoo.BucketizedCuckooTest" time="0.001"/>
+  <testcase name="testBucketSize1MatchesStandard" classname="cuckoo.BucketizedCuckooTest" time="0.002"/>
+</testsuite>

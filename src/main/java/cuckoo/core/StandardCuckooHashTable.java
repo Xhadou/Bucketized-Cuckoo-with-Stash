@@ -26,6 +26,7 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     private int seed1;
     private int seed2;
     private final Random random;
+    private final BenchmarkStats stats = new BenchmarkStats();
 
     @SuppressWarnings("unchecked")
     public StandardCuckooHashTable(int expectedSize) {
@@ -86,6 +87,7 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
             if (table1[h1] == null) {
                 table1[h1] = entry;
                 size++;
+                stats.recordDisplacementChain(i);
                 return;
             }
             // Swap with existing entry in table1
@@ -97,6 +99,7 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
             if (table2[h2] == null) {
                 table2[h2] = entry;
                 size++;
+                stats.recordDisplacementChain(i);
                 return;
             }
             // Swap with existing entry in table2
@@ -106,6 +109,7 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
         }
 
         // maxLoop exceeded: rehash and try again
+        stats.recordDisplacementChain(maxLoop);
         rehash();
         insertEntry(entry);
     }
@@ -131,6 +135,7 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
 
     @SuppressWarnings("unchecked")
     private void rehash() {
+        stats.recordRehash();
         // Collect all existing entries
         Entry<K, V>[] oldTable1 = table1;
         Entry<K, V>[] oldTable2 = table2;
@@ -208,6 +213,6 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
 
     @Override
     public BenchmarkStats getStats() {
-        return new BenchmarkStats();
+        return stats;
     }
 }

@@ -94,6 +94,7 @@ public class BucketizedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     private int seed1;
     private int seed2;
     private final Random random;
+    private final BenchmarkStats stats = new BenchmarkStats();
     private static final int MAX_LOOP = 500;
 
     public BucketizedCuckooHashTable(int expectedSize, int bucketSize) {
@@ -150,12 +151,14 @@ public class BucketizedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
         Entry<K, V> entry = new Entry<>(key, value);
         if (buckets1.get(h1).tryInsert(entry)) {
             size++;
+            stats.recordDisplacementChain(0);
             return;
         }
 
         // Step 3: Try insert into buckets2[h2]
         if (buckets2.get(h2).tryInsert(entry)) {
             size++;
+            stats.recordDisplacementChain(0);
             return;
         }
 
@@ -171,6 +174,7 @@ public class BucketizedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
             int altH2 = hash2(entry.key);
             if (buckets2.get(altH2).tryInsert(entry)) {
                 size++;
+                stats.recordDisplacementChain(i + 1);
                 return;
             }
 
@@ -184,11 +188,13 @@ public class BucketizedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
             h1 = hash1(entry.key);
             if (buckets1.get(h1).tryInsert(entry)) {
                 size++;
+                stats.recordDisplacementChain(i + 1);
                 return;
             }
         }
 
         // Step 5: maxLoop exceeded — rehash and retry
+        stats.recordDisplacementChain(MAX_LOOP);
         rehash();
         put(entry.key, entry.value);
     }
@@ -211,6 +217,7 @@ public class BucketizedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     }
 
     private void rehash() {
+        stats.recordRehash();
         List<Bucket<K, V>> oldBuckets1 = buckets1;
         List<Bucket<K, V>> oldBuckets2 = buckets2;
         int oldSize = size;
@@ -328,6 +335,6 @@ public class BucketizedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
 
     @Override
     public BenchmarkStats getStats() {
-        return new BenchmarkStats();
+        return stats;
     }
 }

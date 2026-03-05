@@ -25,6 +25,7 @@ public class ChainingHashTable<K, V> implements CuckooHashTable<K, V> {
     private Node<K, V>[] table;
     private int capacity;
     private int size;
+    private final BenchmarkStats stats = new BenchmarkStats();
 
     @SuppressWarnings("unchecked")
     public ChainingHashTable(int initialCapacity) {
@@ -103,7 +104,7 @@ public class ChainingHashTable<K, V> implements CuckooHashTable<K, V> {
 
     @Override
     public BenchmarkStats getStats() {
-        return new BenchmarkStats();
+        return stats;
     }
 
     @SuppressWarnings("unchecked")
