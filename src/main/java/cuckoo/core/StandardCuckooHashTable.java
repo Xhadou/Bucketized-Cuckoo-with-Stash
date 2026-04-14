@@ -1,5 +1,7 @@
 package cuckoo.core;
 
+import cuckoo.hash.HashFamily;
+import cuckoo.hash.HashFunctions;
 import cuckoo.hash.MurmurHash3;
 import cuckoo.stats.BenchmarkStats;
 
@@ -26,12 +28,18 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     private int seed1;
     private int seed2;
     private final Random random;
+    private final HashFamily hashFamily;
     private final BenchmarkStats stats = new BenchmarkStats();
     private static final int MAX_GROWTHS = 10;
 
-    @SuppressWarnings("unchecked")
     public StandardCuckooHashTable(int expectedSize) {
+        this(expectedSize, HashFunctions.defaultFamily());
+    }
+
+    @SuppressWarnings("unchecked")
+    public StandardCuckooHashTable(int expectedSize, HashFamily hashFamily) {
         this.expectedSize = expectedSize;
+        this.hashFamily = hashFamily;
         this.capacity = (int) (expectedSize * 2.2);
         this.maxLoop = (int) (6 * Math.log(capacity) / Math.log(2));
         this.random = new Random();
@@ -43,11 +51,11 @@ public class StandardCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     }
 
     private int hash1(K key) {
-        return Math.floorMod(MurmurHash3.hash32(key.hashCode(), seed1), capacity);
+        return Math.floorMod(hashFamily.hash(key.hashCode(), seed1), capacity);
     }
 
     private int hash2(K key) {
-        return Math.floorMod(MurmurHash3.hash32(key.hashCode(), seed2), capacity);
+        return Math.floorMod(hashFamily.hash(key.hashCode(), seed2), capacity);
     }
 
     @Override

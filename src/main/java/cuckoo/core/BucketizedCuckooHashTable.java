@@ -1,6 +1,7 @@
 package cuckoo.core;
 
-import cuckoo.hash.MurmurHash3;
+import cuckoo.hash.HashFamily;
+import cuckoo.hash.HashFunctions;
 import cuckoo.stats.BenchmarkStats;
 
 import java.util.ArrayList;
@@ -103,12 +104,18 @@ public class BucketizedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     private int seed1;
     private int seed2;
     private final Random random;
+    private final HashFamily hashFamily;
     private final BenchmarkStats stats = new BenchmarkStats();
     private static final int MAX_LOOP = 500;
     private static final int MAX_GROWTHS = 10;
 
     public BucketizedCuckooHashTable(int expectedSize, int bucketSize) {
+        this(expectedSize, bucketSize, HashFunctions.defaultFamily());
+    }
+
+    public BucketizedCuckooHashTable(int expectedSize, int bucketSize, HashFamily hashFamily) {
         this.bucketSize = bucketSize;
+        this.hashFamily = hashFamily;
         this.random = new Random();
         this.seed1 = random.nextInt();
         this.seed2 = random.nextInt();
@@ -127,11 +134,11 @@ public class BucketizedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     }
 
     private int hash1(K key) {
-        return Math.floorMod(MurmurHash3.hash32(key.hashCode(), seed1), numBuckets);
+        return Math.floorMod(hashFamily.hash(key.hashCode(), seed1), numBuckets);
     }
 
     private int hash2(K key) {
-        return Math.floorMod(MurmurHash3.hash32(key.hashCode(), seed2), numBuckets);
+        return Math.floorMod(hashFamily.hash(key.hashCode(), seed2), numBuckets);
     }
 
     @Override

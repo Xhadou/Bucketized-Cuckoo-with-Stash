@@ -1,7 +1,8 @@
 package cuckoo.baselines;
 
 import cuckoo.core.CuckooHashTable;
-import cuckoo.hash.MurmurHash3;
+import cuckoo.hash.HashFamily;
+import cuckoo.hash.HashFunctions;
 import cuckoo.stats.BenchmarkStats;
 
 public class ChainingHashTable<K, V> implements CuckooHashTable<K, V> {

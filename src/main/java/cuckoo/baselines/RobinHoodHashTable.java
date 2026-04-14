@@ -5,10 +5,10 @@ import cuckoo.hash.HashFamily;
 import cuckoo.hash.HashFunctions;
 import cuckoo.stats.BenchmarkStats;
 
-public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
+public class RobinHoodHashTable<K, V> implements CuckooHashTable<K, V> {
 
     private static final int SEED = 42;
-    private static final double LOAD_FACTOR_THRESHOLD = 0.5;
+    private static final double LOAD_FACTOR_THRESHOLD = 0.9;
 
     private static class Entry<K, V> {
         final K key;
@@ -24,30 +24,49 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
     private Entry<K, V>[] table;
     private int capacity;
     private int size;
+    private final HashFamily hashFamily;
     private final BenchmarkStats stats = new BenchmarkStats();
 
+    public RobinHoodHashTable(int initialCapacity) {
+        this(initialCapacity, HashFunctions.defaultFamily());
+    }
+
     @SuppressWarnings("unchecked")
-    public LinearProbingHashTable(int initialCapacity) {
+    public RobinHoodHashTable(int initialCapacity, HashFamily hashFamily) {
         this.capacity = Math.max(initialCapacity, 16);
         this.table = new Entry[this.capacity];
         this.size = 0;
+        this.hashFamily = hashFamily;
     }
 
     private int hash(K key) {
-        return Math.floorMod(MurmurHash3.hash32(key.hashCode(), SEED), capacity);
+        return Math.floorMod(hashFamily.hash(key.hashCode(), SEED), capacity);
+    }
+
+    /**
+     * Probe distance: how far this position is from the key's home bucket.
+     */
+    private int probeDistance(K key, int pos) {
+        return (pos - hash(key) + capacity) % capacity;
     }
 
     @Override
     public V get(K key) {
-        int idx = hash(key);
+        stats.recordLookup();
+        int home = hash(key);
         for (int i = 0; i < capacity; i++) {
-            int pos = Math.floorMod(idx + i, capacity);
+            int pos = (home + i) % capacity;
             Entry<K, V> e = table[pos];
             if (e == null) {
-                return null;
+                return null; // empty slot — key absent
             }
             if (e.key.equals(key)) {
                 return e.value;
+            }
+            // If the existing entry's probe distance is less than ours (i),
+            // then our key would have been placed here or earlier — key absent.
+            if (probeDistance(e.key, pos) < i) {
+                return null;
             }
         }
         return null;
@@ -55,34 +74,76 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
 
     @Override
     public void put(K key, V value) {
+        stats.recordInsert();
+
         // Resize before inserting if threshold exceeded
         if ((double) (size + 1) / capacity > LOAD_FACTOR_THRESHOLD) {
             resize(capacity * 2);
         }
-        int idx = hash(key);
+
+        putInternal(key, value, true);
+    }
+
+    /**
+     * Internal put. If countSize is true, increments size on new insertion.
+     */
+    private void putInternal(K key, V value, boolean countSize) {
+        int home = hash(key);
+        K curKey = key;
+        V curValue = value;
+        int curHome = home;
+
         for (int i = 0; i < capacity; i++) {
-            int pos = Math.floorMod(idx + i, capacity);
+            int pos = (curHome + i) % capacity;
             Entry<K, V> e = table[pos];
+
             if (e == null) {
-                table[pos] = new Entry<>(key, value);
-                size++;
+                table[pos] = new Entry<>(curKey, curValue);
+                if (countSize) {
+                    size++;
+                }
                 return;
             }
-            if (e.key.equals(key)) {
-                e.value = value;
+
+            // If we find the same key, update in place
+            if (e.key.equals(curKey)) {
+                e.value = curValue;
+                // If we were carrying a displaced entry, that means curKey == original key
+                // Only on the first iteration (curKey == key) should we NOT increment size
+                // On subsequent iterations this shouldn't happen (no duplicate keys in table)
                 return;
+            }
+
+            // Robin Hood: compare probe distances
+            int existingDist = probeDistance(e.key, pos);
+            int ourDist = (pos - curHome + capacity) % capacity;
+
+            if (ourDist > existingDist) {
+                // Steal this slot from the richer (shorter probe) entry
+                table[pos] = new Entry<>(curKey, curValue);
+                curKey = e.key;
+                curValue = e.value;
+                curHome = hash(curKey);
+                // Continue inserting the displaced entry
+                // Reset i so that i tracks displacement from curHome
+                // The displaced entry was at distance existingDist from its home.
+                // It needs to probe starting from the NEXT position.
+                i = (pos - curHome + capacity) % capacity;
+                // The for-loop will increment i, so the next pos will be curHome + i + 1
             }
         }
+
         // Should not reach here if resize works correctly
         resize(capacity * 2);
-        put(key, value);
+        putInternal(curKey, curValue, countSize);
     }
 
     @Override
     public V remove(K key) {
-        int idx = hash(key);
+        stats.recordRemove();
+        int home = hash(key);
         for (int i = 0; i < capacity; i++) {
-            int pos = Math.floorMod(idx + i, capacity);
+            int pos = (home + i) % capacity;
             Entry<K, V> e = table[pos];
             if (e == null) {
                 return null;
@@ -91,9 +152,12 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
                 V val = e.value;
                 table[pos] = null;
                 size--;
-                // Shift back subsequent entries that may have been displaced
+                // Backward-shift deletion
                 shiftBack(pos);
                 return val;
+            }
+            if (probeDistance(e.key, pos) < i) {
+                return null; // key absent
             }
         }
         return null;
@@ -127,16 +191,11 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
     /**
      * Returns true if an entry with natural position 'naturalPos' currently
      * stored at 'currentPos' should be shifted to 'gapPos'.
-     *
-     * The condition: gapPos is between naturalPos and currentPos (circularly),
-     * meaning the entry "passes over" the gap on its probe path.
      */
     private boolean shouldShift(int naturalPos, int gapPos, int currentPos) {
         if (gapPos < currentPos) {
-            // gap ... current (no wrap-around between them)
             return naturalPos <= gapPos || naturalPos > currentPos;
         } else {
-            // current ... gap (wrap-around between them)
             return naturalPos <= gapPos && naturalPos > currentPos;
         }
     }
@@ -158,6 +217,7 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
 
     @SuppressWarnings("unchecked")
     private void resize(int newCapacity) {
+        stats.recordRehash();
         Entry<K, V>[] oldTable = table;
         int oldCapacity = capacity;
         this.capacity = newCapacity;
@@ -166,7 +226,7 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
         for (int i = 0; i < oldCapacity; i++) {
             Entry<K, V> e = oldTable[i];
             if (e != null) {
-                put(e.key, e.value);
+                putInternal(e.key, e.value, true);
             }
         }
     }

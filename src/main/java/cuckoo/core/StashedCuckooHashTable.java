@@ -1,6 +1,7 @@
 package cuckoo.core;
 
-import cuckoo.hash.MurmurHash3;
+import cuckoo.hash.HashFamily;
+import cuckoo.hash.HashFunctions;
 import cuckoo.stats.BenchmarkStats;
 
 import java.util.ArrayList;
@@ -105,13 +106,19 @@ public class StashedCuckooHashTable<K, V> implements CuckooHashTable<K, V> {
     private int seed1;
     private int seed2;
     private final Random random;
+    private final HashFamily hashFamily;
     private final BenchmarkStats stats = new BenchmarkStats();
     private static final int MAX_LOOP = 500;
     private static final int MAX_GROWTHS = 10;
 
     public StashedCuckooHashTable(int expectedSize, int bucketSize, int stashSize) {
+        this(expectedSize, bucketSize, stashSize, HashFunctions.defaultFamily());
+    }
+
+    public StashedCuckooHashTable(int expectedSize, int bucketSize, int stashSize, HashFamily hashFamily) {
         this.bucketSize = bucketSize;
         this.stashCapacity = stashSize;
+        this.hashFamily = hashFamily;
         this.random = new Random();
         this.seed1 = random.nextInt();
         this.seed2 = random.nextInt();
