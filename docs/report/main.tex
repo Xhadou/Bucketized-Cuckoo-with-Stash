@@ -1,6 +1,7 @@
-\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+\documentclass[10pt,journal,compsoc]{IEEEtran}
 
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -23,23 +24,38 @@
 \title{Applications in the Real World: Performance Analysis of Cuckoo Hashing and its Extensions}
 
 \author{
-    \IEEEauthorblockN{Pratyush Jain, Aditya Raghuram, Aaradhy Sharma, Arnav Neekhra, and Jasmehar Chadha}
+    Pratyush~Jain,
+    Aditya~Raghuram,
+    Aaradhy~Sharma,
+    Arnav~Neekhra,
+    and~Jasmehar~Chadha
+
+    \IEEEcompsocitemizethanks{
+        \IEEEcompsocthanksitem The authors are with the School of Engineering, Shiv Nadar Institution of Eminence, Delhi-NCR, India.\protect\\
+        E-mail: \{pj825, ar694, as783, an203, jc270\}@snu.edu.in
+    }
 }
 
-\maketitle
+\IEEEtitleabstractindextext{
 
 \begin{abstract}
-Hash tables are foundational to modern computing, but traditional designs degrade at high load due to collision clustering. Cuckoo hashing guarantees worst-case constant-time lookup, yet its canonical two-table form is limited to a load factor of approximately $50\%$. A family of extensions---bucketization, stash augmentation, $d$-ary generalization, and cache-optimized variants---has been proposed to overcome this wall while preserving the worst-case guarantee. However, empirical comparisons across this family, together with alternative open-addressing schemes, remain fragmented in the literature, and most published evaluations rely solely on synthetic uniform-random keys. We present a systematic empirical evaluation of ten hash table variants---nine dynamic (standard, bucketized, stashed, and $d$-ary cuckoo; separate chaining; linear, quadratic, Robin Hood, and hopscotch probing) plus Fredman-Kom\-l\'os-Szemer\'edi (FKS) perfect hashing as a static baseline---paired with four hash families (MurmurHash3, xxHash32, FNV-1a, and Carter-Wegman universal). Benchmarks use both synthetic distributions and real Wikipedia pageview data. We formulate five falsifiable hypotheses (H1--H5) covering load factor ceilings, stash effectiveness, synergy, practical competitiveness, and distribution sensitivity, and test them using $126$ unit tests and $340+$ benchmark configurations executed via the Java Microbenchmark Harness (JMH), yielding over $9{,}500$ measured samples. Our results confirm H1 (bucketized cuckoo with $B=4$ achieves $\sim 98\%$ load factor, matching Erlingsson et al.), H2--H3 (the stash behaves as predicted by theory), and H5 (cuckoo schemes are $11$--$34\%$ slower on real string keys than on synthetic integer keys), but \emph{falsify} H4: bucketized cuckoo is approximately $60\%$ slower than linear probing for positive lookups at equal data size. This falsification reveals an honest trade-off: bucketization is a memory-efficiency optimization, not a speed optimization. We also report a scale-dependent hash function sensitivity for FNV-1a that is negligible at $100{,}000$ entries but halves lookup throughput at $500{,}000$ entries. Standard cuckoo's tombstone-free $O(1)$ deletion is empirically validated as competitive with separate chaining and superior to all probing baselines.
+Hash tables are foundational to modern computing, but traditional designs degrade at high load due to collision clustering. Cuckoo hashing guarantees worst-case constant-time lookup, yet its canonical two-table form is limited to a load factor of approximately $50\%$. A family of extensions---bucketization, stash augmentation, $d$-ary generalization, and cache-optimized variants---has been proposed to overcome this wall while preserving the worst-case guarantee. However, empirical comparisons across this family, together with alternative open-addressing schemes, remain fragmented in the literature, and most published evaluations rely solely on synthetic uniform-random keys. We present a systematic empirical evaluation of ten hash table variants---nine dynamic (standard, bucketized, stashed, and $d$-ary cuckoo; separate chaining; linear, quadratic, Robin Hood, and hopscotch probing) plus Fredman-Kom\-l\'os-Szemer\'edi (FKS) perfect hashing as a static baseline---paired with four hash families (MurmurHash3, xxHash32, FNV-1a, and Carter-Wegman universal). Benchmarks use both synthetic distributions and real Wikipedia pageview data. We formulate five falsifiable hypotheses (H1--H5) covering load factor ceilings, stash effectiveness, synergy, practical competitiveness, and distribution sensitivity, and test them using $126$ unit tests and $340+$ benchmark configurations executed via the Java Microbenchmark Harness (JMH), yielding over $9{,}500$ measured samples. Our results confirm H1 (bucketized cuckoo with $B=4$ achieves $\sim 98\%$ load factor, matching Erlingsson et al.), H2--H3 (the stash behaves as predicted by theory), and H5 (cuckoo schemes are $11$--$34\%$ slower on real string keys than on synthetic integer keys), but \emph{falsify} H4: bucketized cuckoo is approximately $60\%$ slower than linear probing for positive lookups at equal data size. This falsification reveals a precise trade-off: bucketization is a memory-efficiency optimization, not a speed optimization. We also report a scale-dependent hash function sensitivity for FNV-1a that is negligible at $100{,}000$ entries but drops its lookup throughput to $\sim 60\%$ of MurmurHash3, xxHash32, and Carter-Wegman universal at $500{,}000$ entries. Standard cuckoo's tombstone-free $O(1)$ deletion is empirically validated as competitive with separate chaining and superior to all probing baselines.
 \end{abstract}
 
 \begin{IEEEkeywords}
 cuckoo hashing, bucketization, stash, hash functions, JMH, load factor, real-world benchmarking
 \end{IEEEkeywords}
 
+}
+
+\maketitle
+\IEEEdisplaynontitleabstractindextext
+\IEEEpeerreviewmaketitle
+
 \section{Introduction}
 
 \subsection{Background and Motivation}
-Hash tables underpin virtually every database, key--value store, compiler, network router, and language runtime. Their theoretical appeal---expected $O(1)$ insertion, lookup, and deletion---makes them ubiquitous in latency-sensitive systems, from CPU branch-prediction tables to distributed in-memory caches such as Memcached and Redis. However, traditional collision-resolution strategies such as separate chaining and linear probing suffer \emph{worst-case} degradation to $O(n)$ when collisions cluster: a single long probe sequence or an unexpectedly long chain can turn a routine lookup into a cache-unfriendly traversal of many hundreds of bytes. In workloads where tail latency matters---for example, interactive web services, financial trading systems, or high-frequency packet processing---this variability is unacceptable.
+\IEEEPARstart{H}{ash} tables underpin virtually every database, key--value store, compiler, network router, and language runtime. Their theoretical appeal---expected $O(1)$ insertion, lookup, and deletion---makes them ubiquitous in latency-sensitive systems, from CPU branch-prediction tables to distributed in-memory caches such as Memcached and Redis. However, traditional collision-resolution strategies such as separate chaining and linear probing suffer \emph{worst-case} degradation to $O(n)$ when collisions cluster: a single long probe sequence or an unexpectedly long chain can turn a routine lookup into a cache-unfriendly traversal of many hundreds of bytes. In workloads where tail latency matters---for example, interactive web services, financial trading systems, or high-frequency packet processing---this variability is unacceptable.
 
 Cuckoo hashing, introduced by Pagh and Rodler~\cite{pagh2004cuckoo}, offers an elegant alternative: each key resides in one of exactly two candidate slots, giving a \emph{worst-case} $O(1)$ lookup guarantee of at most two memory accesses regardless of table occupancy or input ordering. In the decades since, cuckoo hashing has seen substantial industrial adoption: Intel's data-plane development kit uses it for network flow tables, major key--value stores have built on its principles~\cite{fan2013memc3,li2014libcuckoo}, and its descendants power cuckoo filters and learned index structures.
 
@@ -55,13 +71,13 @@ This paper makes three contributions:
 \begin{itemize}
     \item \emph{Breadth.} We implement and benchmark nine dynamic hash table variants (four cuckoo-family and five open-addressing/chaining baselines) plus FKS perfect hashing as a static comparison point, behind a unified Java interface. Four pluggable hash families (MurmurHash3, xxHash32, FNV-1a, Carter-Wegman universal) allow us to separate scheme-level from hash-function-level effects. This produces a head-to-head comparison at a scale not, to our knowledge, previously published in a single study.
     \item \emph{Real-world data.} We benchmark every variant on a real Wikipedia pageview dataset of variable-length string keys, in addition to four synthetic distributions (uniform, sequential, Zipfian, and hotspot). This directly addresses published concerns that synthetic benchmarks overstate hash table robustness.
-    \item \emph{Falsifiable hypotheses.} We formulate five explicit hypotheses (H1--H5) with falsification criteria tied to specific measurable thresholds, test each empirically, and report the falsification of H4 as an honest finding: \emph{bucketization is a memory-efficiency optimization, not a speed optimization.} This is, we believe, a useful corrective to the narrative common in the cuckoo-hashing literature that positions bucketization as a universal improvement.
+    \item \emph{Falsifiable hypotheses.} We formulate five explicit hypotheses (H1--H5) with falsification criteria tied to specific measurable thresholds, test each empirically, and report the falsification of H4 as a central finding: \emph{bucketization is a memory-efficiency optimization, not a speed optimization.} This is, we believe, a useful corrective to the narrative common in the cuckoo-hashing literature that positions bucketization as a universal improvement.
 \end{itemize}
 
 In addition, we report a number of secondary findings of independent interest: (a) standard cuckoo's tombstone-free $O(1)$ deletion is empirically competitive with separate chaining and strictly better than all probing baselines; (b) hopscotch hashing is a consistently strong all-rounder that has received less attention than its performance merits; (c) a scale-dependent hash function sensitivity appears only at tables large enough to exceed L2 cache, offering an empirical caveat to the folklore claim that hash quality is irrelevant for cuckoo on integer keys; and (d) a methodological correction to our lookup benchmark, which initially conflated ``target load factor'' with ``number of inserted elements'' across variants with different load-factor ceilings.
 
 \subsection{Paper Organization}
-Section~\ref{sec:litreview} surveys the relevant literature on cuckoo hashing and its alternatives. Section~\ref{sec:techniques} describes each of the nine implemented hash table variants together with the three hash functions. Section~\ref{sec:methodology} states the five hypotheses, enumerates the benchmark suite, describes the real-data acquisition, and documents a methodological correction. Section~\ref{sec:results} presents results organized hypothesis-by-hypothesis with pgfplots figures and tables. Section~\ref{sec:conclusion} concludes with design guidance, limitations, and directions for future work.
+Section~\ref{sec:litreview} surveys the relevant literature on cuckoo hashing and its alternatives. Section~\ref{sec:techniques} describes each of the ten implemented hash table variants together with the four hash functions. Section~\ref{sec:methodology} states the five hypotheses, enumerates the benchmark suite, describes the real-data acquisition, and documents a methodological correction. Section~\ref{sec:results} presents results organized hypothesis-by-hypothesis with pgfplots figures and tables. Section~\ref{sec:conclusion} concludes with design guidance, limitations, and directions for future work.
 
 \section{Literature Survey}\label{sec:litreview}
 
@@ -132,7 +148,7 @@ We implement four hash functions behind a functional interface \texttt{HashFamil
 
 \emph{MurmurHash3-32} uses two 32-bit multiplicative constants ($\text{0xcc9e2d51}$, $\text{0x1b873593}$) with an inter-step rotate-by-15 and a three-stage finalization mixer ($\text{0x85ebca6b}$, $\text{0xc2b2ae35}$) shown to pass all SMHasher tests.
 
-\emph{xxHash32} uses four prime-like constants and a single-block ingest followed by a three-multiply finalization avalanche. In C with SIMD it achieves $\sim 31$\,GB/s, but in the JVM without vectorization its advantage over MurmurHash3 shrinks to within measurement noise.
+\emph{xxHash32} uses four prime-like constants and a single-block ingest followed by a three-multiply finalization avalanche. Collet's own benchmarks of the C/SIMD reference implementation report high throughput on native hardware~\cite{collet2012xxhash}; in the JVM, where aggressive auto-vectorization does not apply, its advantage over MurmurHash3 shrinks to within measurement noise in our experiments. Our own evaluation measures only the JVM-compiled Java implementation (Section~\ref{sec:methodology}).
 
 \emph{FNV-1a} iteratively XORs each input byte into the hash then multiplies by the FNV prime $\text{0x01000193}$. It is the simplest of the three (about ten lines of code), and known to fail some SMHasher avalanche tests. We include it to probe whether hash quality \emph{measurably} affects cuckoo-family performance.
 
@@ -166,15 +182,17 @@ Robin Hood             & $O(\log n)$ exp. & $O(\log n)$ exp. & $O(1)$ amort. & $
 Linear probing         & $O(\tfrac{1}{(1-\alpha)^2})$ exp. & $O(\tfrac{1}{1-\alpha})$ exp. & $O(1)$ amort. & $\sim 70\%$ \\
 Quadratic probing      & $O(\tfrac{1}{1-\alpha})$ exp. & $O(\tfrac{1}{1-\alpha})$ exp. & $O(1)^*$ & $\sim 50\%$ \\
 Separate chaining      & $O(1+\alpha)$ exp. & $O(1)$ exp. & $O(1+\alpha)$ exp. & unbounded \\
+FKS perfect (static)   & $O(1)$ w.c.    & N/A$^\dagger$ & N/A$^\dagger$ & static \\
 \bottomrule
 \end{tabular}\\[2pt]
-$^*$ Quadratic probing deletion requires tombstones; hence $O(1)$ per operation but accumulating.
+$^*$ Quadratic probing deletion requires tombstones; hence $O(1)$ per operation but accumulating.\\
+$^\dagger$ FKS is static: the entire table is constructed once in $O(n)$ expected time; \texttt{put}/\texttt{remove} are unsupported.
 \end{table}
 
 A key observation from Table~\ref{tab:complexity} is that the cuckoo family, hopscotch, and separate chaining are the only three approaches with bounded worst-case or expected-constant-case lookup behavior independent of load factor. Linear and quadratic probing both have expected-time bounds that grow as the load factor approaches unity---specifically, linear probing exhibits an $O((1-\alpha)^{-2})$ lookup cost, meaning that at $90\%$ load, the expected number of probes can exceed $100$, an effect visible in our negative-lookup results.
 
 \subsection{Memory Layout and Cache Behavior}
-The practical performance of a hash table depends as much on its memory layout as on its asymptotic complexity. A single L3 cache miss on modern Intel or Apple Silicon hardware costs $40$--$80$ nanoseconds; a main-memory DRAM access costs $100$--$200$ nanoseconds. For a typical integer-keyed hash table, these latencies dwarf the $5$--$20$ nanoseconds of hash function computation. Consequently, the number of \emph{cache misses} per operation is often the dominant predictor of throughput.
+The practical performance of a hash table depends as much on its memory layout as on its asymptotic complexity. On contemporary microarchitectures, a last-level (L3) cache hit costs on the order of $10$--$25$\,nanoseconds, while a miss that reaches DRAM costs roughly $50$--$200$\,nanoseconds depending on memory controller queuing and NUMA topology~\cite{hennessy2017computer,intel_optref}. For a typical integer-keyed hash table, these latencies dwarf the few nanoseconds spent on hash function computation. Consequently, the number of \emph{cache misses} per operation is often the dominant predictor of throughput.
 
 Linear probing and Robin Hood achieve excellent cache behavior when probe sequences remain short: consecutive memory accesses within a single probe sequence are sequential and fit within cache lines. Bucketized cuckoo hashing aims for a similar benefit at the bucket level: a bucket of $B=4$ single-word entries occupies $32$ bytes, fitting within a single $64$-byte cache line. However, bucketized cuckoo \emph{also} requires a second cache-line access if the first bucket does not contain the key, for a total of up to two cache misses. Standard cuckoo hashing, despite checking only two positions, places those positions in \emph{different} tables, guaranteeing two cache misses on any failed first-probe. Hopscotch hashing's neighborhood of $H=32$ slots can span one or two cache lines depending on alignment. $d$-ary cuckoo hashing incurs up to $d$ independent cache misses.
 
@@ -198,10 +216,10 @@ We frame the evaluation around five falsifiable hypotheses:
 \end{itemize}
 
 \subsection{Implementation Environment}
-All benchmarks run on an Apple Silicon Mac (M-series, 8 cores) with $16$\,GB RAM, JDK $25.0.2$ (Temurin build). Each hash table implements the common \texttt{CuckooHashTable<K,V>} interface. The hash-function interface \texttt{HashFamily} is injected via constructor, allowing the same table class to be tested with any of the three hash functions. Correctness is verified by $115$ unit tests across all variants.
+All benchmarks run on an Apple Silicon Mac (M-series, 8 cores) with $16$\,GB RAM, JDK $25.0.2$ (Temurin build). Each hash table implements the common \texttt{CuckooHashTable<K,V>} interface. The hash-function interface \texttt{HashFamily} is injected via constructor, allowing the same table class to be tested with any of the four hash functions. Correctness is verified by $126$ unit tests across all variants.
 
 \subsection{Benchmark Suite}
-We wrote eight JMH~\cite{jmh} benchmark classes:
+We wrote nine JMH~\cite{jmh} benchmark classes:
 \begin{itemize}
     \item \textsc{InsertBenchmark}: insertion throughput, $n\in\{100\mathrm{K}, 500\mathrm{K}, 1\mathrm{M}\}$.
     \item \textsc{LookupBenchmark}: positive and negative lookup throughput, $n\in\{30\mathrm{K}, 60\mathrm{K}, 90\mathrm{K}\}$.
@@ -209,7 +227,7 @@ We wrote eight JMH~\cite{jmh} benchmark classes:
     \item \textsc{MixedWorkloadBenchmark}: 80/20 read/write mix.
     \item \textsc{LoadFactorBenchmark}: time to fill a table to capacity, over bucket sizes $\{1,2,4,8\}$ and stash sizes $\{0,1,2,3,4\}$.
     \item \textsc{DatasetBenchmark}: throughput across synthetic uniform, sequential, Zipfian ($\theta = 0.99$), and hotspot distributions.
-    \item \textsc{HashFunctionBenchmark}: bucketized ($B=4$) throughput for MurmurHash3, xxHash32, and FNV-1a.
+    \item \textsc{HashFunctionBenchmark}: bucketized ($B=4$) throughput for MurmurHash3, xxHash32, FNV-1a, and Carter-Wegman universal.
     \item \textsc{RealDataBenchmark}: all nine dynamic variants on $100{,}000$ unique Wikipedia page titles (string keys) extracted from a pageview dump~\cite{wikipedia_pageviews}.
     \item \textsc{PerfectHashBenchmark}: FKS perfect hashing vs six dynamic variants on positive and negative lookups at $n\in\{30{,}000,\,60{,}000\}$; perfect hashing is static, so only lookup workloads are meaningful.
 \end{itemize}
@@ -290,7 +308,7 @@ The $B=4$ configuration exceeds the $95\%$ falsification threshold by a comforta
 \label{fig:dary}
 \end{figure}
 
-This agreement serves as a sanity check on our implementation and a direct empirical validation of the $d$-ary theory---part of the reason we spent significant effort implementing the $d$-ary variant even though it is not central to the bucketization/stash narrative.
+This agreement serves both as a correctness check on our $d$-ary implementation and as a direct empirical validation of the Fotakis et al.\ and Bell-Frieze load-factor thresholds.
 
 \begin{table}[h]
 \centering
@@ -426,7 +444,7 @@ Stashed ($s{=}3$)  & 1034  & 1049  & 323   & 368  & 193  & 208 \\
 \end{tabular}
 \end{table}
 
-\textbf{Verdict: H4 Falsified for bucketized cuckoo.} The honest finding: bucketization buys \emph{memory efficiency}, not lookup speed. A practitioner optimizing for lookup throughput should prefer standard cuckoo or hopscotch over the bucketized variant.
+\textbf{Verdict: H4 Falsified for bucketized cuckoo.} Bucketization yields \emph{memory efficiency}, but not lookup speed. When lookup throughput is the binding constraint, standard cuckoo and hopscotch outperform the bucketized variant by a substantial margin.
 
 \subsection{H5: Distribution Sensitivity (Confirmed)}
 
@@ -459,7 +477,7 @@ Figure~\ref{fig:h5} plots insertion throughput for the top-five performing varia
 \label{fig:h5}
 \end{figure}
 
-The professor's key request was to test on real data. Table~\ref{tab:realdata} compares insertion throughput between synthetic uniform integer keys and real Wikipedia string keys. Cuckoo-family variants---particularly bucketized---are \emph{most sensitive} to the switch, with bucketized slowing by $34\%$. The cost stems from string \texttt{hashCode()} computation overhead and poorer cache behavior under variable-length key storage, both of which interact multiplicatively with cuckoo's two-probe pattern.
+Table~\ref{tab:realdata} compares insertion throughput between synthetic uniform integer keys and real Wikipedia string keys. Cuckoo-family variants---particularly bucketized---are \emph{most sensitive} to the switch, with bucketized slowing by $34\%$. The cost stems from string \texttt{hashCode()} computation overhead and poorer cache behavior under variable-length key storage, both of which interact multiplicatively with cuckoo's two-probe pattern.
 
 \begin{table}[h]
 \centering
@@ -487,24 +505,25 @@ The real-data slowdown from synthetic uniform integer to Wikipedia string keys, 
 
 \subsection{Hash Function Scale Sensitivity}
 
-At $n=100{,}000$, MurmurHash3, xxHash32, and FNV-1a produce statistically indistinguishable throughput on bucketized cuckoo (the three values $82.2$, $84.5$, and $85.6$\,ops/s for insertion are within confidence intervals). At $n=500{,}000$, positive lookup throughput diverges: MurmurHash3 gives $15.1$\,ops/s, xxHash32 $14.4$\,ops/s, but \emph{FNV-1a collapses to $7.9$\,ops/s}---roughly half the throughput of the other two, despite the same algorithmic implementation and the same table parameters ($B=4$).
+At $n=100{,}000$, the four hash families cluster within $\sim 35\%$ of each other on positive-lookup throughput, with the Carter-Wegman universal family surprisingly leading at $225.4$\,ops/s---contradicting the folklore that its multiply-and-mod kernel is a throughput bottleneck. At $n=500{,}000$, the picture reorganizes: MurmurHash3, xxHash32, and Carter-Wegman universal remain bunched within $\sim 7\%$ of each other ($17.7$, $18.9$, $18.6$\,ops/s respectively), while \emph{FNV-1a drops to $10.7$\,ops/s}---roughly $60\%$ of the other three despite the same algorithmic implementation and the same table parameters ($B=4$).
 
 \begin{table}[h]
 \centering
-\caption{Hash function throughput (ops/s) on bucketized ($B=4$) cuckoo.}
+\caption{Hash function throughput (ops/s) on bucketized ($B=4$) cuckoo, positive lookup, from \textsc{HashFunctionBenchmark} (3 forks $\times$ 10 iterations, 99.9\% CI).}
 \label{tab:hashfunc}
 \begin{tabular}{@{}lrr@{}}
 \toprule
 Hash family & $n=100\mathrm{K}$ & $n=500\mathrm{K}$ \\
 \midrule
-MurmurHash3 (pos. lookup) & $168.8 \pm 5.1$ & $15.1 \pm 0.7$ \\
-xxHash32    (pos. lookup) & $166.5 \pm 4.4$ & $14.4 \pm 0.9$ \\
-FNV-1a       (pos. lookup) & $183.3 \pm 5.0$ & $\mathbf{7.9 \pm 0.1}$ \\
+MurmurHash3              & $167.0 \pm 4.4$ & $17.7 \pm 0.2$ \\
+xxHash32                 & $178.1 \pm 4.0$ & $18.9 \pm 0.2$ \\
+FNV-1a                   & $180.3 \pm 4.0$ & $\mathbf{10.7 \pm 0.2}$ \\
+Carter-Wegman universal  & $\mathbf{225.4 \pm 5.3}$ & $18.6 \pm 0.3$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The divergence is subtle but consequential: FNV-1a's weaker avalanche passes SMHasher's smaller-bucket tests but causes a measurable rise in average displacement chain length once the table is large enough that cache pressure dominates. Our \textsc{DirectAnalysis} harness independently confirms nearly equal average chain lengths ($0.15$) across all three hash functions at $n=20{,}000$, indicating the effect only manifests at larger scales. A lesson for the community: hash function quality is often dismissed as irrelevant for cuckoo integer keys. At small scales this is true, but scale-dependent effects emerge once cache pressure interacts with uneven bucket loads. When benchmarking hash-table variants, it is not sufficient to test a single function at a single scale.
+The divergence at scale is subtle but consequential: FNV-1a's weaker avalanche passes SMHasher's smaller-bucket tests but causes a measurable rise in average displacement chain length once the table is large enough that cache pressure dominates. Our \textsc{DirectAnalysis} harness independently confirms nearly equal average chain lengths ($\approx 0.15$) across all four hash functions at $n=20{,}000$, indicating the effect only manifests at larger scales. Hash function quality is frequently dismissed as irrelevant for cuckoo hashing on integer keys; the scale-dependent divergence reported here suggests this conclusion holds only at modest table sizes, and that benchmarks using a single hash function at a single scale are insufficient to characterize hash-function sensitivity. The Carter-Wegman result is notable in its own right: a provably $2$-universal family built from one multiply, one add, and one modulo---against a Mersenne prime that admits the fast $p = 2^{31}{-}1$ reduction---is not only competitive with engineered avalanche mixers but, at moderate scales, actively faster.
 
 \subsection{Insertion Throughput Across Scales}
 
@@ -568,9 +587,9 @@ Robin Hood        & $118.1 \pm 1.5$ \\
 
 The picture is consistent with the lookup and insert benchmarks separately: standard cuckoo wins, bucketized variants lag, Robin Hood is slow. The relative positioning is preserved, suggesting that in realistic workloads dominated by reads, the lookup-throughput advantage of standard cuckoo translates directly to mixed-workload throughput.
 
-\subsection{Deletion Throughput: Addressing the Professor's Concern}
+\subsection{Deletion Throughput}
 
-Table~\ref{tab:delete} shows deletion throughput for $100{,}000$ elements. Standard cuckoo matches chaining ($124$ vs.\ $123$\,ops/s), and outperforms every probing baseline (linear $83$, quadratic $98$) substantially. This is the empirical signature of the theoretical claim: \emph{cuckoo hashing is the only open-addressing scheme with tombstone-free $O(1)$ deletion}, a point we highlighted in Section~\ref{sec:techniques}.
+Table~\ref{tab:delete} shows deletion throughput for $100{,}000$ elements. Standard cuckoo matches chaining ($124$ vs.\ $123$\,ops/s) and substantially outperforms every probing baseline (linear $83$, quadratic $98$). This is the empirical signature of the theoretical property highlighted in Section~\ref{sec:techniques}: \emph{cuckoo hashing is the only open-addressing scheme with tombstone-free $O(1)$ deletion}.
 
 \begin{table}[h]
 \centering
@@ -596,35 +615,35 @@ Robin Hood's poor deletion performance ($25.2$\,ops/s, the worst among baselines
 
 \subsection{Additional Findings: Universal and Perfect Hashing}\label{sec:universal-perfect}
 
-Motivated by reviewer feedback requesting coverage of theoretically-sound hash families, we added two further comparison points: the Carter-Wegman universal hash family~\cite{carter1979universal} as a fourth \texttt{HashFamily} implementation, and Fredman-Kom\-l\'os-Szemer\'edi perfect hashing~\cite{fks1984perfect} as a static lookup-only baseline.
+To broaden the evaluation beyond engineered-mixer hash functions, we include two theoretically-grounded comparison points: the Carter-Wegman universal hash family~\cite{carter1979universal} as a fourth \texttt{HashFamily} implementation, and Fredman-Kom\-l\'os-Szemer\'edi perfect hashing~\cite{fks1984perfect} as a static lookup-only baseline.
 
 \paragraph{Carter-Wegman universal vs engineered mixers.}
-Running the hash function sensitivity analysis (Section~\ref{sec:hypotheses}, H5) with the fourth family yields the result in Figure~\ref{fig:hash-sensitivity-updated}: across five trials of $50{,}000$ insertions into bucketized cuckoo ($B{=}4$), Carter-Wegman produces an average displacement chain length of $0.152 \pm 0.002$, statistically indistinguishable from MurmurHash3 ($0.149 \pm 0.004$), xxHash32 ($0.151 \pm 0.002$), and FNV-1a ($0.153 \pm 0.005$). All four families achieve the same maximum load factor ($\sim 0.900$) with zero rehashes. The theoretical guarantee does not translate into measurably different \emph{algorithmic} behavior on these workloads---consistent with the long-standing folklore that any hash function ``good enough'' to pass modest avalanche tests is effectively interchangeable for cuckoo-family use. Our contribution here is empirical confirmation on a fourth, theoretically-provable family.
+Re-running the hash function sensitivity analysis (Section~\ref{sec:hypotheses}, H5) with the fourth family: across five trials of $50{,}000$ insertions into bucketized cuckoo ($B{=}4$), Carter-Wegman produces an average displacement chain length of $0.152 \pm 0.002$, statistically indistinguishable from MurmurHash3 ($0.149 \pm 0.004$), xxHash32 ($0.151 \pm 0.002$), and FNV-1a ($0.153 \pm 0.005$). All four families achieve the same maximum load factor ($\sim 0.900$) with zero rehashes. The theoretical guarantee does not translate into measurably different \emph{algorithmic} behavior on these workloads---consistent with the long-standing folklore that any hash function passing modest avalanche tests is effectively interchangeable for cuckoo-family use. Our contribution here is empirical confirmation on a fourth, theoretically-provable family.
 
 \paragraph{FKS perfect hashing vs dynamic variants.}
-Perfect hashing is a static dictionary: all keys must be known at construction. This makes a side-by-side lookup-only comparison the only meaningful comparison. Table~\ref{tab:perfect} reports positive-lookup throughput on $50{,}000$ integer keys; construction time is also shown for reference.
+Perfect hashing is a static dictionary: all keys must be known at construction. This makes a side-by-side lookup-only comparison the only meaningful comparison. Table~\ref{tab:perfect} reports positive-lookup throughput from the JMH \textsc{PerfectHashBenchmark} at $n\in\{30{,}000,\,60{,}000\}$ keys (3 forks $\times$ 10 iterations, $30$ samples per cell). Per-key throughput is computed as $\text{score}\times n$ from JMH's iteration-level ops/s.
 
 \begin{table}[h]
 \centering
-\caption{Lookup throughput (positive lookup, $n=50{,}000$) comparing FKS perfect hashing against dynamic variants. Build time refers to construction from a known key set (perfect) or serial \texttt{put()} of all keys (dynamic).}
+\caption{Positive-lookup throughput (million keys/s, JMH 30 samples) for FKS perfect hashing vs dynamic variants. Build time: construction from known keys (FKS) or serial \texttt{put()} (dynamic). Results shown at $n=30{,}000$.}
 \label{tab:perfect}
 \small
 \begin{tabular}{@{}lrr@{}}
 \toprule
-Variant            & Lookup (ops/s) & Build (ms) \\
+Variant            & Lookup (Mkeys/s) & Build (ms) \\
 \midrule
-Standard cuckoo    & $33{,}843{,}044$ & $1$  \\
-Perfect (FKS)      & $32{,}408{,}398$ & $16$ \\
-Quadratic probing  & $30{,}659{,}046$ & $5$  \\
-Hopscotch          & $29{,}214{,}126$ & $4$  \\
-Robin Hood         & $21{,}564{,}094$ & $15$ \\
-Linear probing     & $11{,}681{,}735$ & $5$  \\
-Bucketized ($B=4$) & $7{,}510{,}373$  & $10$ \\
+Standard cuckoo    & $162.9$ & $1$  \\
+Quadratic probing  & $110.0$ & $5$  \\
+Hopscotch          & $101.8$ & $4$  \\
+Linear probing     & $\phantom{0}99.0$ & $5$  \\
+Perfect (FKS)      & $\phantom{00}84.2$ & $16$ \\
+Robin Hood         & $\phantom{00}59.2$ & $15$ \\
+Bucketized ($B=4$) & $\phantom{00}35.4$ & $10$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-FKS perfect hashing achieves $32.4$\,Mops/s---essentially tied with standard cuckoo ($33.8$\,Mops/s, a $4\%$ gap within measurement noise) and ahead of every open-addressing baseline. This result has two interesting implications. First, the theoretical ``zero collisions, at-most-two-probes'' guarantee of FKS does not translate into a throughput advantage over standard cuckoo at this scale, because standard cuckoo's two-probe lookup already achieves the same cache footprint and the difference lies only in whether the second probe is deterministic (FKS) or speculative (cuckoo). Second, FKS dominates bucketized cuckoo by $4.3\times$ on lookups precisely because it avoids the linear bucket scan that dominates bucketized runtime. Construction costs $16$\,ms versus $1$\,ms for the dynamic equivalent---about an order of magnitude slower, reflecting the FKS retry loops---but this is a one-time cost amortized across all subsequent lookups. The practical takeaway: \emph{for read-only dictionaries of known keys, FKS is fully competitive with the fastest dynamic schemes and strictly faster than bucketized variants}; for dynamic workloads it is simply not applicable.
+FKS perfect hashing achieves $84.2$\,Mkeys/s at $n{=}30{,}000$---$52\%$ of standard cuckoo's throughput ($162.9$\,Mkeys/s) and below every probing baseline except Robin Hood and bucketized cuckoo. This is a \emph{surprising} result: despite FKS's theoretical ``zero-collision'' guarantee, its two-level indirection (primary hash $\to$ bucket index $\to$ secondary hash $\to$ slot) produces more irregular memory accesses than standard cuckoo's two fixed table probes, hurting cache performance. Notably, at $n{=}60{,}000$---when the data set no longer fits neatly in L2 cache---the gap narrows to $12\%$ ($79.1$ vs $89.9$\,Mkeys/s), confirming that FKS's disadvantage is primarily a cache-locality effect rather than an algorithmic one. FKS construction costs $16$\,ms versus $1$\,ms for the dynamic equivalent---reflecting the retry loops required to achieve collision-free secondary tables---but this is a one-time cost. The practical takeaway: \emph{FKS is not faster than dynamic schemes at the scales tested; its value lies in the hard worst-case guarantee of exactly two memory accesses and zero re-hashing, not throughput}. For read-only dictionaries where tail-latency determinism matters more than average throughput, FKS remains a principled choice. For anything dynamic, it is inapplicable by design.
 
 \subsection{Summary of Findings}
 
@@ -651,7 +670,7 @@ H5 & Confirmed              & $11$--$34\%$ slowdown on real data\\
 \section{Concluding Remarks}\label{sec:conclusion}
 
 \subsection{What the Results Teach Us}
-Our central empirical finding is that \emph{bucketization is a memory-efficiency optimization, not a speed optimization.} Bucketized cuckoo delivers the $95\%+$ load factors long promised by theory, at the cost of $\sim 60\%$ lookup throughput compared with both linear probing and---more surprisingly---standard cuckoo hashing. This complicates the narrative of the original proposal, which framed bucketization and stash as universal improvements. The honest reading is:
+Our central empirical finding is that \emph{bucketization is a memory-efficiency optimization, not a speed optimization.} Bucketized cuckoo delivers the $95\%+$ load factors long promised by theory, at the cost of $\sim 60\%$ lookup throughput compared with both linear probing and---more surprisingly---standard cuckoo hashing. This complicates the narrative of the original proposal, which framed bucketization and stash as universal improvements. A more precise reading is:
 
 \begin{itemize}
     \item If \emph{memory} is the binding constraint, bucketized cuckoo is the right choice.
@@ -660,16 +679,16 @@ Our central empirical finding is that \emph{bucketization is a memory-efficiency
 \end{itemize}
 
 \subsection{Surprises}
-Three findings surprised us. First, standard cuckoo's lookup dominance at high load: it checks exactly two positions, and that is hard to beat even by cache-optimized alternatives. Second, the FNV-1a scale effect: negligible at $100\mathrm{K}$, halving throughput at $500\mathrm{K}$. This empirically validates the theoretical concern about hash quality in regimes where cache pressure dominates raw computation cost. Third, hopscotch's consistently strong showing---in the conversation around cuckoo extensions, hopscotch rarely gets credit it clearly deserves.
+Three findings surprised us. First, standard cuckoo's lookup dominance at high load: it checks exactly two positions, and that is hard to beat even by cache-optimized alternatives. Second, the FNV-1a scale effect: negligible at $100\mathrm{K}$, dropping to roughly $60\%$ of the other three families at $500\mathrm{K}$. This empirically validates the theoretical concern about hash quality in regimes where cache pressure dominates raw computation cost. Third, hopscotch's consistently strong showing---in the conversation around cuckoo extensions, hopscotch rarely gets credit it clearly deserves.
 
-\subsection{Methodological Honesty}
-An early version of \textsc{LookupBenchmark} suffered from the defect described in Section~\ref{sec:methodology}: using a ``target load factor'' parameter that meant different things for different variants. We caught this during internal review, identified it explicitly, and re-ran the corrected benchmark. We report it here not as a stumble but as evidence that rigorous benchmarking requires \emph{equal semantic treatment of compared configurations}, a lesson not always honored in published hash-table evaluations.
+\subsection{A Methodological Note}
+An early version of \textsc{LookupBenchmark} suffered from the defect described in Section~\ref{sec:methodology}: a ``target load factor'' parameter that meant different things for different variants. We caught this during internal review, identified it explicitly, and re-ran the corrected benchmark. We report it here as evidence that rigorous benchmarking requires \emph{equal semantic treatment of compared configurations}, a requirement not always honored in published hash-table evaluations.
 
 \subsection{Limitations}
 Our evaluation is single-threaded; concurrent cuckoo variants such as libcuckoo~\cite{li2014libcuckoo} likely alter the relative throughput picture substantially and are out of scope here. All benchmarks were run on the JVM, where boxing of \texttt{Integer} keys adds overhead that does not exist in C/C++ implementations of these same algorithms. We used Apple Silicon hardware, which does not expose \texttt{perf}-compatible performance counters, precluding a cache-miss analysis of the kind common in systems papers. Finally, while our real-data benchmark uses Wikipedia pageviews, we did not secure access to the CAIDA traces that would provide additional validation on network-flow keys.
 
 \subsection{Future Work}
-Promising directions include: (1) porting this benchmark suite to a Linux/x86 platform and using \texttt{perf} to perform cache-miss decomposition; (2) adding a concurrent variant and comparing against libcuckoo's lock-striped bucketized cuckoo; (3) evaluating all variants on CAIDA network traces as a stress test for adversarial access patterns; (4) adding cryptographic hash functions such as SipHash to study hash-DoS resistance; and (5) exploring whether the surprising strength of standard cuckoo at high load holds when $B$-way bucketized structures are more carefully cache-aligned.
+Promising directions include: (1) porting this benchmark suite to a Linux/x86 platform and using \texttt{perf} to perform cache-miss decomposition; (2) adding a concurrent variant and comparing against libcuckoo's lock-striped bucketized cuckoo; (3) evaluating all variants on CAIDA network traces as a stress test for adversarial access patterns; and (4) exploring whether the surprising strength of standard cuckoo at high load holds when $B$-slot bucketized structures are more carefully cache-aligned.
 
 \subsection{Design Guidance for Practitioners}
 Based on our findings, we offer the following concrete design guidance to practitioners choosing a hash table:
@@ -681,12 +700,6 @@ Based on our findings, we offer the following concrete design guidance to practi
     \item \emph{For adversarial or DoS-sensitive contexts}: any variant using a keyed PRF hash such as SipHash in place of MurmurHash3.
     \item \emph{Avoid}: Robin Hood hashing unless maximum probe length bounds are specifically required. Its insertion and deletion costs are substantial, and standard linear probing plus good hash quality delivers most of the benefit at a fraction of the cost.
 \end{itemize}
-
-\subsection{Teaching Value}
-Beyond its empirical contributions, our implementation is available as a pedagogical resource. Each of the ten hash table variants is implemented in under $400$ lines of idiomatic Java~25, with a shared interface, a full unit test suite ($126$ tests), and a JMH harness that produces publication-quality benchmark data in under two hours of wall time. Students or implementers wishing to understand these schemes empirically---rather than only through their theoretical analyses---have, we hope, a useful starting point.
-
-\subsection{Closing Thought}
-The cuckoo-family literature is dense with theoretical elegance---load factor thresholds, displacement chain analyses, stash overflow bounds---yet comparatively light on rigorous cross-variant empirical evaluation with real data. Our work offers one such evaluation, together with the observation that the most popular ``improvements'' (bucketization, stash) are not universally improvements in practice, but rather specific trade-offs against specific constraints. We hope this motivates both more careful benchmarking methodology in the hash-table literature and a more nuanced reading of the cuckoo-family design space. The best variant is not universally the bucketized one; it depends on which resource---memory, lookup latency, insertion throughput, or deletion cost---is the binding constraint in the target application.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

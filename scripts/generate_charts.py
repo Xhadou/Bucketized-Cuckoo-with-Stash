@@ -481,7 +481,7 @@ def chart11_perfect_hash_lookup():
     fig, ax = plt.subplots()
 
     pretty = {
-        'PERFECT':          'Perfect\n(FKS, static)',
+        'PERFECT':          'Perfect\n(FKS)',
         'STANDARD':         'Standard\nCuckoo',
         'BUCKETIZED_4':     'Bucketized\n(B=4)',
         'LINEAR_PROBING':   'Linear\nProbing',
@@ -489,29 +489,50 @@ def chart11_perfect_hash_lookup():
         'HOPSCOTCH':        'Hopscotch',
         'ROBIN_HOOD':       'Robin\nHood',
     }
-    order = ['PERFECT', 'STANDARD', 'BUCKETIZED_4', 'LINEAR_PROBING',
-             'QUADRATIC_PROBING', 'HOPSCOTCH', 'ROBIN_HOOD']
+    # Display order: sorted by 30K throughput descending (as in report table)
+    order = ['STANDARD', 'QUADRATIC_PROBING', 'HOPSCOTCH', 'LINEAR_PROBING',
+             'PERFECT', 'ROBIN_HOOD', 'BUCKETIZED_4']
 
-    if df is not None:
-        df = df[df['table_type'].isin(order)].copy()
-        df['o'] = df['table_type'].map({t: i for i, t in enumerate(order)})
-        df = df.sort_values('o')
-        labels = [pretty[t] for t in df['table_type']]
-        # Highlight PERFECT in a contrasting color
-        colors = ['#D62728' if t == 'PERFECT' else PALETTE[i % len(PALETTE)]
-                  for i, t in enumerate(df['table_type'])]
-        bars = ax.bar(labels, df['lookup_ops_per_sec'], color=colors,
-                      edgecolor='white', linewidth=0.5)
-        ax.bar_label(bars, labels=[_ops_label(v) for v in df['lookup_ops_per_sec']],
-                     padding=4, fontsize=8)
+    if df is not None and 'num_elements' in df.columns:
+        # Grouped bars: n=30K and n=60K side by side
+        df30 = df[df['num_elements'] == 30000].set_index('table_type')['lookup_ops_per_sec']
+        df60 = df[df['num_elements'] == 60000].set_index('table_type')['lookup_ops_per_sec']
+        x = np.arange(len(order))
+        w = 0.38
+        vals30 = [df30.get(t, 0) for t in order]
+        vals60 = [df60.get(t, 0) for t in order]
+        colors30 = ['#D62728' if t == 'PERFECT' else PALETTE[i % len(PALETTE)]
+                    for i, t in enumerate(order)]
+        colors60 = [c + '99' if isinstance(c, str) else (*c[:3], 0.55)
+                    for c in colors30]
+        b30 = ax.bar(x - w/2, vals30, w, label='n=30K', color=colors30, edgecolor='white')
+        b60 = ax.bar(x + w/2, vals60, w, label='n=60K', color=PALETTE[:len(order)],
+                     alpha=0.55, edgecolor='white')
+        ax.bar_label(b30, labels=[_ops_label(v) for v in vals30], padding=3, fontsize=7)
+        ax.bar_label(b60, labels=[_ops_label(v) for v in vals60], padding=3, fontsize=7)
+        ax.set_xticks(x)
+        ax.set_xticklabels([pretty[t] for t in order])
+        ax.legend(loc='upper right')
     else:
-        labels = [pretty[t] for t in order]
-        vals = [32e6, 34e6, 7.5e6, 12e6, 31e6, 29e6, 22e6]
-        bars = ax.bar(labels, vals, color=PALETTE[:len(labels)], edgecolor='white')
-        ax.bar_label(bars, labels=[_ops_label(v) for v in vals], padding=4, fontsize=8)
+        # Fallback: use 30K data or old single-row CSV
+        if df is not None:
+            df = df[df['table_type'].isin(order)].copy()
+            df['o'] = df['table_type'].map({t: i for i, t in enumerate(order)})
+            df = df.sort_values('o')
+            labels = [pretty[t] for t in df['table_type']]
+            colors = ['#D62728' if t == 'PERFECT' else PALETTE[i % len(PALETTE)]
+                      for i, t in enumerate(df['table_type'])]
+            bars = ax.bar(labels, df['lookup_ops_per_sec'], color=colors, edgecolor='white')
+            ax.bar_label(bars, labels=[_ops_label(v) for v in df['lookup_ops_per_sec']],
+                         padding=4, fontsize=8)
+        else:
+            labels = [pretty[t] for t in order]
+            vals = [163e6, 110e6, 102e6, 99e6, 84e6, 59e6, 35e6]
+            bars = ax.bar(labels, vals, color=PALETTE[:len(labels)], edgecolor='white')
+            ax.bar_label(bars, labels=[_ops_label(v) for v in vals], padding=4, fontsize=8)
 
-    ax.set_title('Perfect Hashing vs Dynamic Variants — Lookup Throughput')
-    ax.set_ylabel('Lookup Throughput (ops/sec)')
+    ax.set_title('FKS Perfect Hashing vs Dynamic Variants — Positive Lookup Throughput (JMH)')
+    ax.set_ylabel('Lookup Throughput (keys/sec)')
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(_ops_label))
     ax.set_ylim(bottom=0)
     plt.tight_layout()
