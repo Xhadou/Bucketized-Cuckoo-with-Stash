@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class MixedWorkloadBenchmark {
 
-    @Param({"STANDARD", "BUCKETIZED_4", "STASHED_3", "CHAINING", "LINEAR_PROBING"})
+    @Param({"STANDARD", "BUCKETIZED_4", "STASHED_3", "CHAINING", "LINEAR_PROBING", "QUADRATIC_PROBING", "HOPSCOTCH", "ROBIN_HOOD", "D_ARY_3"})
     public String tableType;
 
     private CuckooHashTable<Integer, Integer> table;
@@ -33,6 +33,10 @@ public class MixedWorkloadBenchmark {
             case "STASHED_3": table = new StashedCuckooHashTable<>(TABLE_SIZE, 4, 3); break;
             case "CHAINING": table = new ChainingHashTable<>(TABLE_SIZE); break;
             case "LINEAR_PROBING": table = new LinearProbingHashTable<>(TABLE_SIZE); break;
+            case "QUADRATIC_PROBING": table = new QuadraticProbingHashTable<>(TABLE_SIZE); break;
+            case "HOPSCOTCH": table = new HopscotchHashTable<>(TABLE_SIZE); break;
+            case "ROBIN_HOOD": table = new RobinHoodHashTable<>(TABLE_SIZE); break;
+            case "D_ARY_3": table = new DAryHashTable<>(TABLE_SIZE, 3); break;
             default: throw new IllegalArgumentException();
         }
 

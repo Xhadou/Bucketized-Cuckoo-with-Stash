@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class InsertBenchmark {
 
-    @Param({"STANDARD", "BUCKETIZED_4", "STASHED_3", "CHAINING", "LINEAR_PROBING"})
+    @Param({"STANDARD", "BUCKETIZED_4", "STASHED_3", "CHAINING", "LINEAR_PROBING", "QUADRATIC_PROBING", "HOPSCOTCH", "ROBIN_HOOD", "D_ARY_3"})
     public String tableType;
 
     @Param({"100000", "500000", "1000000"})
@@ -38,6 +38,10 @@ public class InsertBenchmark {
             case "STASHED_3": return new StashedCuckooHashTable<>(numElements, 4, 3);
             case "CHAINING": return new ChainingHashTable<>(numElements);
             case "LINEAR_PROBING": return new LinearProbingHashTable<>(numElements);
+            case "QUADRATIC_PROBING": return new QuadraticProbingHashTable<>(numElements);
+            case "HOPSCOTCH": return new HopscotchHashTable<>(numElements);
+            case "ROBIN_HOOD": return new RobinHoodHashTable<>(numElements);
+            case "D_ARY_3": return new DAryHashTable<>(numElements, 3);
             default: throw new IllegalArgumentException("Unknown type: " + tableType);
         }
     }
