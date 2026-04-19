@@ -19,6 +19,10 @@ public final class HashFunctions {
         return FNV1aHash::hash32;
     }
 
+    public static HashFamily universal() {
+        return UniversalHash::hash32;
+    }
+
     /** Default hash family used when none is specified. */
     public static HashFamily defaultFamily() {
         return MurmurHash3::hash32;

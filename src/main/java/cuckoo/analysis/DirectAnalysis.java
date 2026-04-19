@@ -30,6 +30,7 @@ public class DirectAnalysis {
         analyzeDAryLoadFactors(resultsDir);
         analyzeHashFunctionSensitivity(resultsDir);
         analyzeDeleteThroughput(resultsDir);
+        analyzePerfectHashLookup(resultsDir);
 
         System.out.println("\nAll analysis complete. CSVs written to " + resultsDir + "/");
     }
@@ -369,8 +370,9 @@ public class DirectAnalysis {
         int insertCount = 50000;
         int expectedSize = 50000;
 
-        String[] hashNames = {"MurmurHash3", "xxHash32", "FNV1a"};
-        HashFamily[] families = {HashFunctions.murmur3(), HashFunctions.xxhash32(), HashFunctions.fnv1a()};
+        String[] hashNames = {"MurmurHash3", "xxHash32", "FNV1a", "Universal"};
+        HashFamily[] families = {HashFunctions.murmur3(), HashFunctions.xxhash32(),
+                                 HashFunctions.fnv1a(), HashFunctions.universal()};
 
         try (PrintWriter pw = new PrintWriter(new FileWriter(dir + "/hash_sensitivity.csv"))) {
             pw.println("hash_function,trial,avg_displacement_chain,rehash_count,max_load_factor");
@@ -443,6 +445,77 @@ public class DirectAnalysis {
                 deleteOps /= measureTrials;
                 pw.printf("%s,%.0f%n", type, deleteOps);
                 System.out.printf("  %s delete: %,.0f ops/sec%n", type, deleteOps);
+            }
+        }
+        System.out.println();
+    }
+
+    /**
+     * Perfect hashing comparison: measure lookup throughput for FKS perfect
+     * hashing vs top dynamic variants on a fixed key set. Perfect hashing
+     * is static (no put/remove), so only positive lookup is measured.
+     */
+    static void analyzePerfectHashLookup(String dir) throws Exception {
+        System.out.println("--- Perfect Hashing vs Dynamic (Lookup) ---");
+        int N = 50_000;
+        int warmupTrials = 2;
+        int measureTrials = 5;
+
+        Random rng = new Random(42);
+        int[] keys = new int[N];
+        for (int i = 0; i < N; i++) keys[i] = rng.nextInt();
+
+        Map<Integer, Integer> entryMap = new HashMap<>();
+        for (int k : keys) entryMap.put(k, k);
+
+        // Variant builders. Perfect is built from the entry map; the rest
+        // are filled by insertion so they reach their natural load factors.
+        String[] types = {"PERFECT", "STANDARD", "BUCKETIZED_4", "LINEAR_PROBING",
+                          "QUADRATIC_PROBING", "HOPSCOTCH", "ROBIN_HOOD"};
+
+        try (PrintWriter pw = new PrintWriter(new FileWriter(dir + "/perfect_hash_lookup.csv"))) {
+            pw.println("table_type,lookup_ops_per_sec,construction_ms");
+            for (String type : types) {
+                int safeN = type.equals("STANDARD") ? (int)(N * 0.35) : N;
+
+                // Construction (measured once)
+                long cStart = System.nanoTime();
+                CuckooHashTable<Integer, Integer> table;
+                if (type.equals("PERFECT")) {
+                    table = new PerfectHashTable<>(entryMap);
+                } else {
+                    table = createTable(type, N);
+                    for (int i = 0; i < safeN; i++) table.put(keys[i], keys[i]);
+                }
+                long cMs = (System.nanoTime() - cStart) / 1_000_000;
+
+                // Warmup
+                for (int w = 0; w < warmupTrials; w++) {
+                    int sum = 0;
+                    for (int i = 0; i < safeN; i++) {
+                        Integer v = table.get(keys[i]);
+                        if (v != null) sum += v;
+                    }
+                    if (sum == 0xDEADBEEF) System.out.print("");
+                }
+
+                // Measure
+                double totalOps = 0;
+                for (int t = 0; t < measureTrials; t++) {
+                    long start = System.nanoTime();
+                    int sum = 0;
+                    for (int i = 0; i < safeN; i++) {
+                        Integer v = table.get(keys[i]);
+                        if (v != null) sum += v;
+                    }
+                    long elapsed = System.nanoTime() - start;
+                    totalOps += safeN / (elapsed / 1e9);
+                    if (sum == 0xDEADBEEF) System.out.print("");
+                }
+                double opsPerSec = totalOps / measureTrials;
+                pw.printf("%s,%.0f,%d%n", type, opsPerSec, cMs);
+                System.out.printf("  %s lookup: %,.0f ops/sec  (build: %d ms)%n",
+                                  type, opsPerSec, cMs);
             }
         }
         System.out.println();

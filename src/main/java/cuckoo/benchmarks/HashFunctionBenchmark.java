@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class HashFunctionBenchmark {
 
-    @Param({"MURMUR3", "XXHASH", "FNV1A"})
+    @Param({"MURMUR3", "XXHASH", "FNV1A", "UNIVERSAL"})
     public String hashFunction;
 
     @Param({"100000", "500000"})
@@ -50,6 +50,7 @@ public class HashFunctionBenchmark {
             case "MURMUR3": return HashFunctions.murmur3();
             case "XXHASH":  return HashFunctions.xxhash32();
             case "FNV1A":   return HashFunctions.fnv1a();
+            case "UNIVERSAL": return HashFunctions.universal();
             default: throw new IllegalArgumentException("Unknown hash function: " + hashFunction);
         }
     }
