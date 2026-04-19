@@ -1,0 +1,8 @@
+# Real-world datasets (too large for git)
+*.gz
+*.csv
+*.pcap
+
+# Keep this .gitignore and README
+!.gitignore
+!README.md

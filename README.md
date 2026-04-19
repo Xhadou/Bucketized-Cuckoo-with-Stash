@@ -1,6 +1,6 @@
 # Bucketized Cuckoo Hashing with Stash
 
-An academic implementation and empirical evaluation of cuckoo hashing variants in Java. This project implements standard cuckoo hashing, bucketized cuckoo hashing, and stash-augmented bucketized cuckoo hashing, then benchmarks them against classical baseline hash tables (separate chaining and linear probing) using JMH microbenchmarks.
+An academic implementation and empirical evaluation of cuckoo hashing variants in Java. This project implements nine hash table variants — standard, bucketized, stashed, and d-ary cuckoo hashing, plus five classical baselines — and benchmarks them against each other using JMH microbenchmarks across synthetic and real-world workloads.
 
 ## Directory Structure
 
@@ -8,6 +8,10 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 .
 ├── pom.xml
 ├── .gitignore
+├── HYPOTHESES.md                        # 5 falsifiable hypotheses + experiment matrix
+├── GETTING_STARTED.md                   # Setup and usage guide
+├── benchmark_results.txt                # Raw JMH output (full suite)
+├── lookup_results.txt                   # Raw JMH output (lookup benchmark)
 ├── scripts/
 │   ├── run_benchmarks.sh
 │   ├── generate_charts.py
@@ -15,27 +19,40 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 ├── src/
 │   ├── main/java/cuckoo/
 │   │   ├── core/
-│   │   │   ├── CuckooHashTable.java       (common interface)
+│   │   │   ├── CuckooHashTable.java              (common interface)
 │   │   │   ├── StandardCuckooHashTable.java
 │   │   │   ├── BucketizedCuckooHashTable.java
-│   │   │   └── StashedCuckooHashTable.java
+│   │   │   ├── StashedCuckooHashTable.java
+│   │   │   └── DAryHashTable.java
 │   │   ├── baselines/
 │   │   │   ├── ChainingHashTable.java
-│   │   │   └── LinearProbingHashTable.java
+│   │   │   ├── LinearProbingHashTable.java
+│   │   │   ├── QuadraticProbingHashTable.java
+│   │   │   ├── HopscotchHashTable.java
+│   │   │   └── RobinHoodHashTable.java
 │   │   ├── hash/
+│   │   │   ├── HashFamily.java                   (functional interface for injectable hash families)
+│   │   │   ├── HashFunction.java
+│   │   │   ├── HashFunctions.java
 │   │   │   ├── MurmurHash3.java
-│   │   │   └── HashFunction.java
+│   │   │   ├── XXHash32.java
+│   │   │   └── FNV1aHash.java
 │   │   ├── stats/
 │   │   │   └── BenchmarkStats.java
-│   │   ├── util/
-│   │   │   └── WorkloadGenerator.java
 │   │   ├── analysis/
-│   │   │   └── DirectAnalysis.java        (stress tests, no JMH overhead)
+│   │   │   └── DirectAnalysis.java               (stress tests, no JMH overhead)
+│   │   ├── util/
+│   │   │   ├── WikipediaDataLoader.java
+│   │   │   └── WorkloadGenerator.java
 │   │   └── benchmarks/
 │   │       ├── InsertBenchmark.java
 │   │       ├── LookupBenchmark.java
 │   │       ├── MixedWorkloadBenchmark.java
-│   │       └── LoadFactorBenchmark.java
+│   │       ├── LoadFactorBenchmark.java
+│   │       ├── DeleteBenchmark.java
+│   │       ├── DatasetBenchmark.java
+│   │       ├── HashFunctionBenchmark.java
+│   │       └── RealDataBenchmark.java
 │   └── test/java/cuckoo/
 │       ├── MurmurHash3Test.java
 │       ├── StandardCuckooTest.java
@@ -43,25 +60,52 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 │       ├── StashedCuckooTest.java
 │       ├── BaselinesTest.java
 │       ├── StatsAndWorkloadTest.java
-│       └── CorrectnessTest.java
+│       ├── CorrectnessTest.java
+│       ├── baselines/
+│       │   ├── HopscotchHashTableTest.java
+│       │   ├── QuadraticProbingHashTableTest.java
+│       │   └── RobinHoodHashTableTest.java
+│       ├── core/
+│       │   └── DAryHashTableTest.java
+│       └── hash/
+│           └── HashFunctionTest.java
+├── data/
+│   └── README.md                        # Instructions for downloading Wikipedia dataset
 ├── docs/
-│   ├── GETTING_STARTED.md
-│   ├── RESEARCH.md
+│   └── RESEARCH.md
 │   └── report/
-│       └── final-report.md
-├── results/
-│   ├── csv/           (DirectAnalysis / JMH output)
-│   └── charts/        (generated PNGs)
-└── README.md
+│       ├── main.tex                     # Full IEEE conference report (LaTeX source)
+│       ├── references.bib
+│       └── main.pdf                     # Compiled report
+└── results/
+    ├── csv/                             # CSVs from DirectAnalysis and JMH runs
+    │   ├── throughput.csv
+    │   ├── load_factor_vs_bucket.csv
+    │   ├── rehash_vs_stash.csv
+    │   ├── displacement_chains.csv
+    │   ├── dary_load_factors.csv
+    │   ├── delete_throughput.csv
+    │   └── hash_sensitivity.csv
+    └── charts/                          # Generated PNG charts
+        ├── 01_insert_throughput.png
+        ├── 02_lookup_throughput.png
+        ├── 03_load_factor_vs_bucket_size.png
+        ├── 04_rehash_vs_stash.png
+        ├── 05_displacement_chains.png
+        ├── 06_mixed_workload.png
+        ├── 07_delete_throughput.png
+        ├── 08_hash_sensitivity.png
+        ├── 09_dary_load_factors.png
+        └── 10_performance_heatmap.png
 ```
 
 ## Prerequisites
 
-- **Java 17+** (tested with OpenJDK 17)
+- **Java 25** (tested with OpenJDK 25.0.2)
 - **Maven 3.6+**
-- **Python 3.8+** (only needed for chart generation)
+- **Python 3.9+** (only needed for chart generation)
 
-> For a full walkthrough including setup, testing, and result analysis, see [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).
+> For a full walkthrough including setup, testing, and result analysis, see [`GETTING_STARTED.md`](GETTING_STARTED.md).
 
 ## Build Instructions
 
@@ -69,7 +113,7 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 # Compile
 mvn clean compile
 
-# Run tests (61 tests across all 5 implementations)
+# Run tests (115 tests across all 9 implementations)
 mvn test
 
 # Build benchmarks jar
@@ -88,7 +132,7 @@ java -cp target/classes cuckoo.analysis.DirectAnalysis
 ## Running Full JMH Benchmarks
 
 ```bash
-# Run all benchmarks (takes ~30 minutes)
+# Run all benchmarks (takes ~45 minutes)
 bash scripts/run_benchmarks.sh
 
 # Or run a specific benchmark
@@ -98,48 +142,39 @@ java -jar target/benchmarks.jar InsertBenchmark
 java -jar target/benchmarks.jar -l
 ```
 
-## Generating Charts
-
-```bash
-pip install -r scripts/requirements.txt
-python scripts/generate_charts.py
-# Charts saved to results/charts/
-```
-
-The chart generation script produces seven publication-quality visualizations:
-
-1. Insert throughput comparison
-2. Lookup throughput (positive and negative)
-3. Load factor vs. bucket size
-4. Rehash probability vs. stash size
-5. Displacement chain length distribution
-6. Mixed workload performance
-7. Performance heatmap
-
 ## Hash Table Variants
 
-| Variant | Description |
-|---------|-------------|
-| **StandardCuckooHashTable** | Classic two-table cuckoo hashing (Pagh & Rodler 2004). O(1) worst-case lookup. Maximum load factor ~50%. |
-| **BucketizedCuckooHashTable** | Each table position holds B slots instead of one. With B=4, achieves ~95% load factor while preserving O(1) lookup. |
-| **StashedCuckooHashTable** | Bucketized cuckoo hashing augmented with a small constant-size stash for displaced elements. Reduces rehash probability to near zero. |
-| **ChainingHashTable** | Baseline. Separate chaining with linked lists. Simple but cache-unfriendly at high load. |
-| **LinearProbingHashTable** | Baseline. Open addressing with linear probing. Good cache behavior but degrades beyond ~70% load. |
+| Variant | Family | Description |
+|---------|--------|-------------|
+| **StandardCuckooHashTable** | Cuckoo | Classic two-table cuckoo hashing (Pagh & Rodler 2004). O(1) worst-case lookup. Max load factor ~57%. |
+| **BucketizedCuckooHashTable** | Cuckoo | Each table position holds B slots. With B=4, achieves ~98% load factor while preserving O(1) lookup. |
+| **StashedCuckooHashTable** | Cuckoo | Bucketized cuckoo augmented with a small constant-size stash. Reduces rehash probability to near zero. |
+| **DAryHashTable** | Cuckoo | Uses d≥3 hash functions for richer placement options. d=3 reaches ~89%, d=4 reaches ~96% load. |
+| **ChainingHashTable** | Baseline | Separate chaining with linked lists. Simple but cache-unfriendly at high load. |
+| **LinearProbingHashTable** | Baseline | Open addressing with linear probing. Excellent cache behavior up to ~70% load. |
+| **QuadraticProbingHashTable** | Baseline | Quadratic probing with triangular sequence. Avoids primary clustering; uses tombstones for deletion. |
+| **HopscotchHashTable** | Baseline | Neighborhood-bitmap open addressing. Bounds probe distance to H=32; good cache behavior. |
+| **RobinHoodHashTable** | Baseline | Displaces elements with shorter probe distances to reduce variance. |
 
-## Key Results
+## Key Results (Summary)
 
-- **Bucketized cuckoo hashing** with bucket size B=4 achieves load factors above 95%, far exceeding standard cuckoo hashing (~50%) and linear probing (~70%).
-- **Adding a stash** of size 3--4 virtually eliminates insertion failures, making rehashing unnecessary in practice.
-- **Lookup throughput** for all cuckoo variants remains O(1) worst-case, competitive with or better than chaining and linear probing at high load factors.
-- **Mixed workloads** (50% lookup, 30% insert, 20% delete) show that stashed bucketized cuckoo hashing provides the best overall throughput when the table is kept at high occupancy.
+- **H1 Confirmed:** B=4 achieves 98% load factor vs ~57% for standard cuckoo (B=1).
+- **H2 Confirmed:** Stash of s=3 reduces rehash count to near zero.
+- **H3 Confirmed:** B=4+s=3 achieves >95% load factor with near-zero rehash probability simultaneously.
+- **H4 Falsified:** Bucketized cuckoo is ~60% slower than linear probing on lookups; Standard Cuckoo is 1.85× faster. Bucketization is a memory-efficiency optimization, not a speed optimization.
+- **H5 Confirmed:** Cuckoo variants show ≤15% throughput variance across distributions; Robin Hood shows 10× variation; Bucketized shows 34% slowdown on real Wikipedia string keys.
 
-See the generated charts in `results/charts/` for detailed visualizations.
+See [`docs/report/main.pdf`](docs/report/main.pdf) for the full analysis.
 
 ## References
 
 1. **Pagh, R. & Rodler, F.F.** (2004). Cuckoo Hashing. *Journal of Algorithms*, 51(2), 122--144.
-2. **Kirsch, A., Mitzenmacher, M. & Wieder, U.** (2010). More Robust Hashing: Cuckoo Hashing with a Stash. *SIAM Journal on Computing*, 39(4), 1543--1561.
-3. **Fan, B., Andersen, D.G., Kaminsky, M. & Mitzenmacher, M.** (2014). Cuckoo Filter: Practically Better Than Bloom. *Proc. 10th ACM International on Conference on Emerging Networking Experiments and Technologies (CoNEXT)*, 75--88.
+2. **Kirsch, A., Mitzenmacher, M. & Wieder, U.** (2009). More Robust Hashing: Cuckoo Hashing with a Stash. *SIAM Journal on Computing*, 39(4), 1543--1561.
+3. **Fan, B., Andersen, D.G. & Kaminsky, M.** (2013). MemC3: Compact and Concurrent MemCache with Dumber Caching and Smarter Hashing. *NSDI*.
+4. **Erlingsson, Ú., Manasse, M. & McSherry, F.** (2006). A Cool and Practical Alternative to Traditional Hash Tables. *WDDS*.
+5. **Herlihy, M., Shavit, N. & Tzafrir, M.** (2008). Hopscotch Hashing. *DISC*.
+6. **Celis, P., Larson, P-Å. & Munro, J.I.** (1985). Robin Hood Hashing. *FOCS*.
+7. **Fotakis, D., Pagh, R., Sanders, P. & Spirakis, P.** (2005). Space Efficient Hash Tables with Worst Case Constant Access Time. *Theory of Computing Systems*, 38(2).
 
 ## License
 
