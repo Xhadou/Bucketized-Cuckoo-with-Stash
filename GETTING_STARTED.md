@@ -32,7 +32,7 @@ This compiles all source files and produces `target/benchmarks.jar` (the self-co
 mvn test
 ```
 
-Runs 115 unit and integration tests across all 9 hash table implementations:
+Runs 126 unit and integration tests across all 10 hash table implementations:
 
 - `MurmurHash3Test` — hash function determinism and distribution
 - `StandardCuckooTest` — basic standard cuckoo hashing

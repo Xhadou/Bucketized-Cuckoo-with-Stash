@@ -1,6 +1,6 @@
 # Bucketized Cuckoo Hashing with Stash
 
-An academic implementation and empirical evaluation of cuckoo hashing variants in Java. This project implements nine hash table variants — standard, bucketized, stashed, and d-ary cuckoo hashing, plus five classical baselines — and benchmarks them against each other using JMH microbenchmarks across synthetic and real-world workloads.
+An academic implementation and empirical evaluation of cuckoo hashing variants in Java. This project implements ten hash table variants — four cuckoo-family (standard, bucketized, stashed, d-ary), five open-addressing/chaining baselines (chaining, linear probing, quadratic probing, Robin Hood, Hopscotch), and FKS perfect hashing as a static baseline — benchmarked against each other using JMH microbenchmarks across synthetic and real-world workloads. Four pluggable hash families (MurmurHash3, xxHash32, FNV-1a, Carter-Wegman universal) isolate hash-function effects from scheme-level effects.
 
 ## Directory Structure
 
@@ -113,7 +113,7 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 # Compile
 mvn clean compile
 
-# Run tests (115 tests across all 9 implementations)
+# Run tests (126 tests across all 10 implementations)
 mvn test
 
 # Build benchmarks jar

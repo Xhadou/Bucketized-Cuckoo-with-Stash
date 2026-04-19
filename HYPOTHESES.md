@@ -95,11 +95,12 @@ This document maps each hypothesis to specific, falsifiable predictions and the 
 | `LookupBenchmark` | H4 | All 9 variants, numElements={30K,60K,90K} |
 | `InsertBenchmark` | H4 | All 9 variants, numElements={100K,500K,1M} |
 | `DeleteBenchmark` | H4 | All 9 variants, numElements={100K,500K} |
-| `HashFunctionBenchmark` | H5 | hashFunc={MURMUR3,XXHASH,FNV1A}, B=4 |
-| `DatasetBenchmark` | H5 | All 8 variants, data={uniform,zipfian,wikipedia} |
+| `HashFunctionBenchmark` | H5 | hashFunc={MURMUR3,XXHASH,FNV1A,UNIVERSAL}, B=4 |
+| `DatasetBenchmark` | H5 | All 9 dynamic variants, data={uniform,zipfian,wikipedia} |
+| `PerfectHashBenchmark` | Additional | FKS perfect vs 6 dynamic variants, lookup-only |
 | `DirectAnalysis.analyzeDisplacementChains` | H1, H2 | B={1,2,4,8}, d={2,3,4} |
 
-### Hash Table Variants (9 total)
+### Hash Table Variants (10 total: 9 dynamic + 1 static)
 
 1. Separate chaining (baseline)
 2. Linear probing (baseline)
@@ -110,3 +111,11 @@ This document maps each hypothesis to specific, falsifiable predictions and the 
 7. Bucketized cuckoo (d=2, B=4)
 8. Stashed cuckoo (d=2, B=4, s=3)
 9. d-ary cuckoo (d=3, B=1)
+10. FKS perfect hashing (static, lookup-only — put/remove unsupported)
+
+### Hash Functions (4 families)
+
+1. MurmurHash3-32 (avalanche-tuned, SMHasher-verified)
+2. xxHash32 (avalanche-tuned, Yann Collet 2012)
+3. FNV-1a (simple, known to fail some SMHasher tests)
+4. Carter-Wegman universal, `h(x) = ((ax+b) mod p)` with `p = 2^31 - 1` (provably 2-universal)
