@@ -5,7 +5,7 @@ import cuckoo.hash.HashFamily;
 import cuckoo.hash.HashFunctions;
 import cuckoo.stats.BenchmarkStats;
 
-public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
+public class QuadraticProbingHashTable<K, V> implements CuckooHashTable<K, V> {
 
     private static final int SEED = 42;
     private static final double LOAD_FACTOR_THRESHOLD = 0.5;
@@ -20,39 +20,58 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
         }
     }
 
+    /** Sentinel tombstone entry — key and value are null. */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static final Entry TOMBSTONE = new Entry(null, null);
+
     @SuppressWarnings("unchecked")
     private Entry<K, V>[] table;
     private int capacity;
     private int size;
+    private int occupied; // size + tombstone count (for resize decisions)
     private final HashFamily hashFamily;
     private final BenchmarkStats stats = new BenchmarkStats();
 
-    public LinearProbingHashTable(int initialCapacity) {
+    public QuadraticProbingHashTable(int initialCapacity) {
         this(initialCapacity, HashFunctions.defaultFamily());
     }
 
     @SuppressWarnings("unchecked")
-    public LinearProbingHashTable(int initialCapacity, HashFamily hashFamily) {
-        this.capacity = Math.max(initialCapacity, 16);
+    public QuadraticProbingHashTable(int initialCapacity, HashFamily hashFamily) {
+        this.capacity = Math.max(Integer.highestOneBit(Math.max(initialCapacity, 16) - 1) << 1, 16);
         this.hashFamily = hashFamily;
         this.table = new Entry[this.capacity];
         this.size = 0;
+        this.occupied = 0;
     }
 
     private int hash(K key) {
         return Math.floorMod(hashFamily.hash(key.hashCode(), SEED), capacity);
     }
 
+    /**
+     * Triangular-number probe: position = (hash + i*(i+1)/2) % capacity.
+     * Guaranteed to visit every slot when capacity is a power of 2.
+     */
+    private int probe(int hash, int i) {
+        return Math.floorMod(hash + (i * i + i) / 2, capacity);
+    }
+
+    private boolean isTombstone(Entry<K, V> e) {
+        return e == TOMBSTONE;
+    }
+
     @Override
     public V get(K key) {
-        int idx = hash(key);
+        stats.recordLookup();
+        int h = hash(key);
         for (int i = 0; i < capacity; i++) {
-            int pos = Math.floorMod(idx + i, capacity);
+            int pos = probe(h, i);
             Entry<K, V> e = table[pos];
             if (e == null) {
                 return null;
             }
-            if (e.key.equals(key)) {
+            if (!isTombstone(e) && e.key.equals(key)) {
                 return e.value;
             }
         }
@@ -61,90 +80,66 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
 
     @Override
     public void put(K key, V value) {
-        // Resize before inserting if threshold exceeded
-        if ((double) (size + 1) / capacity > LOAD_FACTOR_THRESHOLD) {
+        stats.recordInsert();
+        // Resize if occupied (live + tombstones) exceeds threshold
+        if ((double) (occupied + 1) / capacity > LOAD_FACTOR_THRESHOLD) {
             resize(capacity * 2);
         }
-        int idx = hash(key);
+
+        int h = hash(key);
+        int firstTombstone = -1;
         for (int i = 0; i < capacity; i++) {
-            int pos = Math.floorMod(idx + i, capacity);
+            int pos = probe(h, i);
             Entry<K, V> e = table[pos];
             if (e == null) {
-                table[pos] = new Entry<>(key, value);
+                // Insert at first tombstone if we passed one, otherwise here
+                if (firstTombstone != -1) {
+                    table[firstTombstone] = new Entry<>(key, value);
+                    // Tombstone reused — occupied stays the same
+                } else {
+                    table[pos] = new Entry<>(key, value);
+                    occupied++;
+                }
                 size++;
                 return;
+            }
+            if (isTombstone(e)) {
+                if (firstTombstone == -1) {
+                    firstTombstone = pos;
+                }
+                continue;
             }
             if (e.key.equals(key)) {
                 e.value = value;
                 return;
             }
         }
-        // Should not reach here if resize works correctly
+        // Table is full — should not happen if resize works correctly
         resize(capacity * 2);
         put(key, value);
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public V remove(K key) {
-        int idx = hash(key);
+        // unchecked: TOMBSTONE cast
+        stats.recordRemove();
+        int h = hash(key);
         for (int i = 0; i < capacity; i++) {
-            int pos = Math.floorMod(idx + i, capacity);
+            int pos = probe(h, i);
             Entry<K, V> e = table[pos];
             if (e == null) {
                 return null;
             }
-            if (e.key.equals(key)) {
+            if (!isTombstone(e) && e.key.equals(key)) {
                 V val = e.value;
-                table[pos] = null;
+                table[pos] = (Entry<K, V>) TOMBSTONE;
                 size--;
-                // Shift back subsequent entries that may have been displaced
-                shiftBack(pos);
+                // occupied stays the same — tombstone still counts
                 return val;
             }
         }
         return null;
-    }
-
-    /**
-     * After removing an entry at the given position, shift back any subsequent
-     * entries whose natural hash position is at or before the gap. This avoids
-     * the need for tombstones.
-     */
-    private void shiftBack(int removedPos) {
-        int pos = removedPos;
-        while (true) {
-            pos = (pos + 1) % capacity;
-            Entry<K, V> e = table[pos];
-            if (e == null) {
-                break;
-            }
-            int naturalPos = hash(e.key);
-            // Check if the entry at 'pos' needs to be moved back.
-            // It needs moving if removedPos lies in the range [naturalPos, pos)
-            // (circularly).
-            if (shouldShift(naturalPos, removedPos, pos)) {
-                table[removedPos] = e;
-                table[pos] = null;
-                removedPos = pos;
-            }
-        }
-    }
-
-    /**
-     * Returns true if an entry with natural position 'naturalPos' currently
-     * stored at 'currentPos' should be shifted to 'gapPos'.
-     *
-     * The condition: gapPos is between naturalPos and currentPos (circularly),
-     * meaning the entry "passes over" the gap on its probe path.
-     */
-    private boolean shouldShift(int naturalPos, int gapPos, int currentPos) {
-        if (gapPos < currentPos) {
-            // gap ... current (no wrap-around between them)
-            return naturalPos <= gapPos || naturalPos > currentPos;
-        } else {
-            // current ... gap (wrap-around between them)
-            return naturalPos <= gapPos && naturalPos > currentPos;
-        }
     }
 
     @Override
@@ -169,9 +164,10 @@ public class LinearProbingHashTable<K, V> implements CuckooHashTable<K, V> {
         this.capacity = newCapacity;
         this.table = new Entry[newCapacity];
         this.size = 0;
+        this.occupied = 0;
         for (int i = 0; i < oldCapacity; i++) {
             Entry<K, V> e = oldTable[i];
-            if (e != null) {
+            if (e != null && !isTombstone(e)) {
                 put(e.key, e.value);
             }
         }

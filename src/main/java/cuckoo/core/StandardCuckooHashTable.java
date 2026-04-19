@@ -2,7 +2,6 @@ package cuckoo.core;
 
 import cuckoo.hash.HashFamily;
 import cuckoo.hash.HashFunctions;
-import cuckoo.hash.MurmurHash3;
 import cuckoo.stats.BenchmarkStats;
 
 import java.util.Random;

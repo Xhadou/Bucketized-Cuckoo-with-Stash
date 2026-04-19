@@ -26,17 +26,23 @@ public class ChainingHashTable<K, V> implements CuckooHashTable<K, V> {
     private Node<K, V>[] table;
     private int capacity;
     private int size;
+    private final HashFamily hashFamily;
     private final BenchmarkStats stats = new BenchmarkStats();
 
-    @SuppressWarnings("unchecked")
     public ChainingHashTable(int initialCapacity) {
+        this(initialCapacity, HashFunctions.defaultFamily());
+    }
+
+    @SuppressWarnings("unchecked")
+    public ChainingHashTable(int initialCapacity, HashFamily hashFamily) {
         this.capacity = Math.max(initialCapacity, 1);
+        this.hashFamily = hashFamily;
         this.table = new Node[this.capacity];
         this.size = 0;
     }
 
     private int hash(K key) {
-        return Math.floorMod(MurmurHash3.hash32(key.hashCode(), SEED), capacity);
+        return Math.floorMod(hashFamily.hash(key.hashCode(), SEED), capacity);
     }
 
     @Override

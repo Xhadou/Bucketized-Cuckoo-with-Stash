@@ -20,7 +20,6 @@ public class RobinHoodHashTable<K, V> implements CuckooHashTable<K, V> {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Entry<K, V>[] table;
     private int capacity;
     private int size;

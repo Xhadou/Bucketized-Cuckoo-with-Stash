@@ -21,7 +21,6 @@ public class HopscotchHashTable<K, V> implements CuckooHashTable<K, V> {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Entry<K, V>[] table;
     private int[] hopInfo; // bitmap per bucket: bit j set means slot (bucket+j)%cap belongs to this bucket
     private int capacity;
