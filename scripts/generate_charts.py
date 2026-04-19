@@ -365,13 +365,14 @@ def chart8_hash_sensitivity():
         axes[1].set_ylim(0, 1.05)
         axes[1].set_xlabel('Hash Function')
     else:
-        funcs = ['MurmurHash3', 'xxHash32', 'FNV1a']
-        axes[0].bar(funcs, [0.15, 0.15, 0.15], color=PALETTE[:3])
+        funcs = ['MurmurHash3', 'xxHash32', 'FNV1a', 'Universal']
+        axes[0].bar(funcs, [0.15, 0.15, 0.15, 0.15], color=PALETTE[:4])
         axes[0].set_title('Avg Displacement Chain by Hash Function')
-        axes[1].bar(funcs, [0.90, 0.90, 0.90], color=PALETTE[:3])
+        axes[1].bar(funcs, [0.90, 0.90, 0.90, 0.90], color=PALETTE[:4])
         axes[1].set_title('Max Load Factor by Hash Function')
 
-    fig.suptitle('Hash Function Sensitivity (H5)', fontweight='bold')
+    fig.suptitle('Hash Function Sensitivity — incl. Carter-Wegman Universal (H5)',
+                 fontweight='bold')
     plt.tight_layout()
     path = os.path.join(CHARTS_DIR, '08_hash_sensitivity.png')
     fig.savefig(path)
@@ -473,6 +474,54 @@ def chart10_heatmap():
 
 
 # ---------------------------------------------------------------------------
+# Chart 11: Perfect Hashing vs Dynamic Variants (Lookup)  [NEW]
+# ---------------------------------------------------------------------------
+def chart11_perfect_hash_lookup():
+    df = _try_load_csv('perfect_hash_lookup.csv')
+    fig, ax = plt.subplots()
+
+    pretty = {
+        'PERFECT':          'Perfect\n(FKS, static)',
+        'STANDARD':         'Standard\nCuckoo',
+        'BUCKETIZED_4':     'Bucketized\n(B=4)',
+        'LINEAR_PROBING':   'Linear\nProbing',
+        'QUADRATIC_PROBING':'Quadratic\nProbing',
+        'HOPSCOTCH':        'Hopscotch',
+        'ROBIN_HOOD':       'Robin\nHood',
+    }
+    order = ['PERFECT', 'STANDARD', 'BUCKETIZED_4', 'LINEAR_PROBING',
+             'QUADRATIC_PROBING', 'HOPSCOTCH', 'ROBIN_HOOD']
+
+    if df is not None:
+        df = df[df['table_type'].isin(order)].copy()
+        df['o'] = df['table_type'].map({t: i for i, t in enumerate(order)})
+        df = df.sort_values('o')
+        labels = [pretty[t] for t in df['table_type']]
+        # Highlight PERFECT in a contrasting color
+        colors = ['#D62728' if t == 'PERFECT' else PALETTE[i % len(PALETTE)]
+                  for i, t in enumerate(df['table_type'])]
+        bars = ax.bar(labels, df['lookup_ops_per_sec'], color=colors,
+                      edgecolor='white', linewidth=0.5)
+        ax.bar_label(bars, labels=[_ops_label(v) for v in df['lookup_ops_per_sec']],
+                     padding=4, fontsize=8)
+    else:
+        labels = [pretty[t] for t in order]
+        vals = [32e6, 34e6, 7.5e6, 12e6, 31e6, 29e6, 22e6]
+        bars = ax.bar(labels, vals, color=PALETTE[:len(labels)], edgecolor='white')
+        ax.bar_label(bars, labels=[_ops_label(v) for v in vals], padding=4, fontsize=8)
+
+    ax.set_title('Perfect Hashing vs Dynamic Variants — Lookup Throughput')
+    ax.set_ylabel('Lookup Throughput (ops/sec)')
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(_ops_label))
+    ax.set_ylim(bottom=0)
+    plt.tight_layout()
+    path = os.path.join(CHARTS_DIR, '11_perfect_hash_lookup.png')
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main():
@@ -481,7 +530,7 @@ def main():
 
     csvs = ['throughput.csv', 'load_factor_vs_bucket.csv', 'rehash_vs_stash.csv',
             'displacement_chains.csv', 'delete_throughput.csv', 'hash_sensitivity.csv',
-            'dary_load_factors.csv']
+            'dary_load_factors.csv', 'perfect_hash_lookup.csv']
     found = [f for f in csvs if os.path.isfile(os.path.join(CSV_DIR, f))]
     missing = [f for f in csvs if f not in found]
     if found:
@@ -500,6 +549,7 @@ def main():
         ('08_hash_sensitivity.png',          chart8_hash_sensitivity),
         ('09_dary_load_factors.png',         chart9_dary_load_factors),
         ('10_performance_heatmap.png',       chart10_heatmap),
+        ('11_perfect_hash_lookup.png',       chart11_perfect_hash_lookup),
     ]
 
     generated = []

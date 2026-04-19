@@ -1,10 +1,9 @@
 table_type,chain_length,count
-Standard,0,4477
-Standard,1,21
-Standard,2,2
-Bucketized_B4,0,4341
-Bucketized_B4,1,118
-Bucketized_B4,2,32
-Bucketized_B4,3,7
+Standard,0,4471
+Standard,1,28
+Standard,2,1
+Bucketized_B4,0,4345
+Bucketized_B4,1,117
+Bucketized_B4,2,31
+Bucketized_B4,3,6
 Bucketized_B4,4,1
-Bucketized_B4,5,1
