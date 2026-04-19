@@ -44,7 +44,7 @@ Runs 126 unit and integration tests across all 10 hash table implementations:
 - `StatsAndWorkloadTest` — stats collector and workload generator
 - `CorrectnessTest` — parameterised stress tests across representative types (100K keys each)
 
-Expected: `Tests run: 115, Failures: 0, Errors: 0`
+Expected: `Tests run: 126, Failures: 0, Errors: 0`
 
 ## 4. Project Structure
 
@@ -62,6 +62,7 @@ src/main/java/cuckoo/
     QuadraticProbingHashTable.java         # Quadratic open addressing + tombstones
     HopscotchHashTable.java                # Neighborhood-bitmap open addressing
     RobinHoodHashTable.java                # Probe-distance displacement
+    PerfectHashTable.java                  # FKS static perfect hashing (lookup-only)
   hash/
     HashFamily.java                        # Functional interface for injectable hash families
     HashFunction.java
@@ -69,12 +70,13 @@ src/main/java/cuckoo/
     MurmurHash3.java                       # 32-bit hash with seed support
     XXHash32.java                          # xxHash32 implementation
     FNV1aHash.java                         # FNV-1a implementation
+    UniversalHash.java                     # Carter-Wegman 2-universal family
   stats/
     BenchmarkStats.java                    # Metrics collector
   util/
     WikipediaDataLoader.java               # Loads real pageview titles from .gz dump
     WorkloadGenerator.java
-  benchmarks/                              # JMH benchmark classes (8 total)
+  benchmarks/                              # JMH benchmark classes (9 total)
     InsertBenchmark.java
     LookupBenchmark.java
     MixedWorkloadBenchmark.java
@@ -83,6 +85,7 @@ src/main/java/cuckoo/
     DatasetBenchmark.java
     HashFunctionBenchmark.java
     RealDataBenchmark.java
+    PerfectHashBenchmark.java
   analysis/
     DirectAnalysis.java                    # Stress test runner (no JMH overhead)
 
@@ -98,10 +101,12 @@ src/test/java/cuckoo/
     HopscotchHashTableTest.java
     QuadraticProbingHashTableTest.java
     RobinHoodHashTableTest.java
+    PerfectHashTableTest.java
   core/
     DAryHashTableTest.java
   hash/
     HashFunctionTest.java
+    UniversalHashTest.java
 
 data/
   README.md                                # Instructions for downloading Wikipedia dataset
@@ -121,7 +126,7 @@ docs/
 
 results/
   csv/                                     # Output CSVs from DirectAnalysis and JMH
-  charts/                                  # Generated PNG charts (01–07)
+  charts/                                  # Generated PNG charts (01–11)
 ```
 
 ## 5. Run Direct Analysis (Recommended First Step)
@@ -137,11 +142,14 @@ This writes CSVs to `results/csv/`:
 
 | File | What it measures |
 |------|-----------------|
-| `throughput.csv` | Insert, lookup, and mixed ops/sec for all 9 variants |
+| `throughput.csv` | Insert, lookup, and mixed ops/sec for the dynamic variants |
 | `load_factor_vs_bucket.csv` | Max achievable load factor for B=1,2,4,8 |
 | `rehash_vs_stash.csv` | Rehash count vs stash size s=0..4 |
 | `displacement_chains.csv` | Chain length distribution (Standard vs Bucketized) |
 | `dary_load_factors.csv` | Max load factor for d=2,3,4 |
+| `delete_throughput.csv` | Deletion throughput across variants |
+| `hash_sensitivity.csv` | Avg chain length for MurmurHash3, xxHash32, FNV-1a, Carter-Wegman universal |
+| `perfect_hash_lookup.csv` | FKS vs dynamic variants lookup throughput |
 
 ## 6. Generate Charts
 

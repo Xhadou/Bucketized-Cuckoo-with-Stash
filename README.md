@@ -29,14 +29,16 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 │   │   │   ├── LinearProbingHashTable.java
 │   │   │   ├── QuadraticProbingHashTable.java
 │   │   │   ├── HopscotchHashTable.java
-│   │   │   └── RobinHoodHashTable.java
+│   │   │   ├── RobinHoodHashTable.java
+│   │   │   └── PerfectHashTable.java             (FKS static perfect hashing)
 │   │   ├── hash/
 │   │   │   ├── HashFamily.java                   (functional interface for injectable hash families)
 │   │   │   ├── HashFunction.java
 │   │   │   ├── HashFunctions.java
 │   │   │   ├── MurmurHash3.java
 │   │   │   ├── XXHash32.java
-│   │   │   └── FNV1aHash.java
+│   │   │   ├── FNV1aHash.java
+│   │   │   └── UniversalHash.java                (Carter-Wegman 2-universal family)
 │   │   ├── stats/
 │   │   │   └── BenchmarkStats.java
 │   │   ├── analysis/
@@ -52,7 +54,8 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 │   │       ├── DeleteBenchmark.java
 │   │       ├── DatasetBenchmark.java
 │   │       ├── HashFunctionBenchmark.java
-│   │       └── RealDataBenchmark.java
+│   │       ├── RealDataBenchmark.java
+│   │       └── PerfectHashBenchmark.java
 │   └── test/java/cuckoo/
 │       ├── MurmurHash3Test.java
 │       ├── StandardCuckooTest.java
@@ -64,11 +67,13 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
 │       ├── baselines/
 │       │   ├── HopscotchHashTableTest.java
 │       │   ├── QuadraticProbingHashTableTest.java
-│       │   └── RobinHoodHashTableTest.java
+│       │   ├── RobinHoodHashTableTest.java
+│       │   └── PerfectHashTableTest.java
 │       ├── core/
 │       │   └── DAryHashTableTest.java
 │       └── hash/
-│           └── HashFunctionTest.java
+│           ├── HashFunctionTest.java
+│           └── UniversalHashTest.java
 ├── data/
 │   └── README.md                        # Instructions for downloading Wikipedia dataset
 ├── docs/
@@ -85,7 +90,8 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
     │   ├── displacement_chains.csv
     │   ├── dary_load_factors.csv
     │   ├── delete_throughput.csv
-    │   └── hash_sensitivity.csv
+    │   ├── hash_sensitivity.csv
+    │   └── perfect_hash_lookup.csv
     └── charts/                          # Generated PNG charts
         ├── 01_insert_throughput.png
         ├── 02_lookup_throughput.png
@@ -96,7 +102,8 @@ An academic implementation and empirical evaluation of cuckoo hashing variants i
         ├── 07_delete_throughput.png
         ├── 08_hash_sensitivity.png
         ├── 09_dary_load_factors.png
-        └── 10_performance_heatmap.png
+        ├── 10_performance_heatmap.png
+        └── 11_perfect_hash_lookup.png
 ```
 
 ## Prerequisites
