@@ -2,3 +2,18 @@
 target/
 *.class
 firebase-debug.log
+dependency-reduced-pom.xml
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+texput.log
+.DS_Store
+.venv/
+.vscode/
+
+# Raw JMH output (results captured in results/csv/ instead)
+benchmark_results.txt
+lookup_results.txt
